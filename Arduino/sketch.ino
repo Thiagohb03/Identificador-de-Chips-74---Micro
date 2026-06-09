@@ -36,8 +36,8 @@ void loop()
 {
   if (!identificado && Serial.available() > 0)
     {
-      char cmd = Serial.read();
-      if (cmd == '1') 
+      char verifica = Serial.read();
+      if (verifica == '1') 
           {
             identificado = true;
 
