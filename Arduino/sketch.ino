@@ -6,17 +6,34 @@ MCUFRIEND_kbv tft;
 #define PRETO 0x0000
 
 bool identificado = false;
-String nome = "";
-String codigo = "";
-int qtdPinos = 0;
+String nome = "Somador 4 bits";
+String codigo = "74283";
+int qtdPinos = 14;
 String pinos[32];
 
-void setup() {
+
+void setup()
+{
   Serial.begin(9600);
-  Serial.setTimeout(10000);
+  Serial.setTimeout(5000);
   uint16_t id = tft.readID();
   tft.begin(id);
   tft.setRotation(0);
+
+  pinos[0]="aa";
+  pinos[1]="bb";
+  pinos[2]="cc";
+  pinos[3]="dd";
+  pinos[4]="ee";
+  pinos[5]="ff";
+  pinos[6]="gg";
+  pinos[7]="hh";
+  pinos[8]="ii";
+  pinos[9]="jj";
+  pinos[10]="kk";
+  pinos[11]="ll";
+  pinos[12]="mm";
+  pinos[13]="nn";
 
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
@@ -33,9 +50,13 @@ void setup() {
   tft.print("e pressione");
   tft.setCursor(20, 140);
   tft.print("o botao");
+
+  desenharChip(nome,codigo,qtdPinos, pinos);
+  identificado = true;
 }
 
-void lerSerial() {
+void lerSerial()
+{
   String linhaQtd = Serial.readStringUntil('\n');
   linhaQtd.trim();
   qtdPinos = linhaQtd.toInt();
@@ -59,7 +80,8 @@ void lerSerial() {
   }
 }
 
-void desenharChip() {
+void desenharChip(String nome, String codigo, int qtdPinos, String pinos[])
+{
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
 
@@ -79,57 +101,58 @@ void desenharChip() {
   int espaco = 20;
 
 
-  int retX = 90;
-  int retY = 40;
-  int retW = 60;
-  int retH = metade * espaco;
+  int xRet = 90;
+  int yRet = 40;
+  int larguraRet = 60;
+  int alturaRet = metade * espaco;
 
-  tft.drawRect(retX, retY, retW, retH, BRANCO);
+  tft.drawRect(xRet, yRet, larguraRet, alturaRet, BRANCO);
 
 
   for (int i = 0; i < metade; i++) {
-    int py = retY + i * espaco + 4;
+    int py = yRet + i * espaco + 4;
 
 
-    tft.drawRect(retX - 14, py, 14, 14, BRANCO);
+    tft.drawRect(xRet - 14, py, 14, 14, BRANCO);
 
 
     tft.setTextSize(1);
-    tft.setCursor(retX - 11, py + 3);
+    tft.setCursor(xRet - 11, py + 3);
     tft.print(i);
 
 
-    tft.setCursor(retX - 14 - (pinos[i].length() * 6) - 2, py + 3);
+    tft.setCursor(xRet - 14 - (pinos[i].length() * 6) - 2, py + 3);
     tft.print(pinos[i].substring(0, 5));
   }
 
 
   for (int i = 0; i < metade; i++) {
     int pinoIdx = qtdPinos - 1 - i;
-    int py = retY + i * espaco + 4;
+    int py = yRet + i * espaco + 4;
 
 
-    tft.drawRect(retX + retW, py, 14, 14, BRANCO);
+    tft.drawRect(xRet + larguraRet, py, 14, 14, BRANCO);
 
 
     tft.setTextSize(1);
-    tft.setCursor(retX + retW + 2, py + 3);
+    tft.setCursor(xRet + larguraRet + 2, py + 3);
     tft.print(pinoIdx);
 
 
-    tft.setCursor(retX + retW + 16, py + 3);
+    tft.setCursor(xRet + larguraRet + 16, py + 3);
     tft.print(pinos[pinoIdx].substring(0, 5));
   }
 }
 
-void loop() {
+void loop()
+{
   if (!identificado && Serial.available() > 0) {
     String linha = Serial.readStringUntil('\n');
     linha.trim();
     if (linha == "DESENHO CHIP") {
       identificado = true;
       lerSerial();
-      desenharChip();
+      desenharChip(nome,codigo,qtdPinos, pinos);
     }
   }
 }
