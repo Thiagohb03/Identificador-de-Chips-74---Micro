@@ -7,11 +7,6 @@ MCUFRIEND_kbv tft;
 #define BRANCO 0xFFFF
 #define PRETO 0x0000
 
-String nome = "";
-String codigo = "";
-int qtdPinos = 0;
-String pinos[32];
-
 struct Teste {
   byte valorEsperado[16];
 };
@@ -37,7 +32,6 @@ struct No {
 };
 
 No* listaChips = nullptr;
-String atual = " "
 void adicionarLista(Chip c) {
   No* novo = new No();
   novo->chip = c;
@@ -276,7 +270,6 @@ void setup() {
   uint16_t id = tft.readID();
   tft.begin(id);
   tft.setRotation(0);
-  Serial.println(atual);
   carregaChip();
   //identificarChip();
 
@@ -306,20 +299,17 @@ void lerSerial(String linha) {
 
   //codigo
   int prox = linha.indexOf(':', atual);
-  codigo = linha.substring(atual, prox);
   codigo.toCharArray(c.codigo, 8);
   atual = prox + 1;
 
   //nome
   prox = linha.indexOf(':', atual);
-  nome = linha.substring(atual, prox);
   nome.toCharArray(c.nome, 21);
   atual = prox + 1;
 
 
   //quantidade de pinos
   prox = linha.indexOf(':', atual);
-  qtdPinos = linha.substring(atual, prox).toInt();
   c.qtdPinos=qtdPinos;
   atual = prox + 1;
 
@@ -328,7 +318,6 @@ void lerSerial(String linha) {
   for (int i = 0; i < qtdPinos; i++) {
     prox = linha.indexOf(':', atual);
     String p=linha.substring(atual, prox);
-    pinos[i] = p;
     p.toCharArray(c.nomPinos[i], 3);
     atual = prox + 1;
   }
@@ -379,7 +368,6 @@ void loop() {
   if (Serial.available() > 0) {
     String linha = Serial.readStringUntil('\n');
     linha.trim();
-    atual = linha;
     if (linha.startsWith("CHIP:")) {
       lerSerial(linha);
     } else if (linha.startsWith("Selecionar:")) {
