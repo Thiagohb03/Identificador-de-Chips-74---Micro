@@ -32,6 +32,7 @@ struct No {
 };
 
 No* listaChips = nullptr;
+String atual = " "
 void adicionarLista(Chip c) {
   No* novo = new No();
   novo->chip = c;
@@ -270,6 +271,7 @@ void setup() {
   uint16_t id = tft.readID();
   tft.begin(id);
   tft.setRotation(0);
+  Serial.println(atual);
   carregaChip();
   //identificarChip();
 
@@ -299,17 +301,20 @@ void lerSerial(String linha) {
 
   //codigo
   int prox = linha.indexOf(':', atual);
+  String codigo = linha.substring(atual, prox);
   codigo.toCharArray(c.codigo, 8);
   atual = prox + 1;
 
   //nome
   prox = linha.indexOf(':', atual);
+  String nome = linha.substring(atual, prox);
   nome.toCharArray(c.nome, 21);
   atual = prox + 1;
 
 
   //quantidade de pinos
   prox = linha.indexOf(':', atual);
+  int qtdPinos = linha.substring(atual, prox).toInt();
   c.qtdPinos=qtdPinos;
   atual = prox + 1;
 
@@ -368,6 +373,7 @@ void loop() {
   if (Serial.available() > 0) {
     String linha = Serial.readStringUntil('\n');
     linha.trim();
+    atual = linha;
     if (linha.startsWith("CHIP:")) {
       lerSerial(linha);
     } else if (linha.startsWith("Selecionar:")) {
