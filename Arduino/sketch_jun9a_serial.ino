@@ -246,8 +246,9 @@ void identificarChip() {
 
   bool identificado = false;
 
-  while(listaChips->proximo!=nullptr) {
-    Chip c = listaChips->chip;
+  No* atual = listaChips;
+  while (atual != nullptr) {
+    Chip c = atual->chip;
     bool todosPassaram = true;
 
     for (int k = 0; k < c.qtdTestes; k++) {
@@ -266,12 +267,13 @@ void identificarChip() {
       desenharChip(c);
       break;
     }
+
+    atual = atual->proximo;
   }
 
   if (!identificado) {
     Serial.println("Chip nao identificado.");
   }
-  listaChips=listaChips->proximo;
 }
 
 
@@ -296,11 +298,9 @@ void setup() {
   tft.setCursor(20, 80);
   tft.print("Insira o chip");
   tft.setCursor(20, 110);
-  tft.print("e pressione");
+  tft.print("e envie o comando");
   tft.setCursor(20, 140);
-  tft.print("o botao");
-  delay(1000);
-  identificarChip();
+  tft.print("Identificar");
 }
 
 //CHIP:74283:Somador:14:A1:A2:A3:A4:A5:A6:A7:D1:D2:D3:D4:D5:D6:D7:DIR:0:1:2:1:0:2:1:0:ESQ:1:0:1:2:0:1:2:1:TESTES:2:0101010101010101:1010101010101010
@@ -389,6 +389,8 @@ void loop() {
     } else if (linha.startsWith("Selecionar:")) {
       int n = linha.substring(linha.indexOf(':') + 1).toInt();
       selecionarChip(n);
+    } else if (linha.startsWith("Identificar")) {
+      identificarChip();
     }
 
   }
