@@ -228,8 +228,9 @@ void identificarChip() {
   if (totalChips <= 0 || totalChips > MAX_CHIPS) {
     Serial.println("EEPROM vazia ou corrompida.");
     tft.fillScreen(PRETO);
-  tft.setTextColor(BRANCO);
-  tft.print("Nenhum Chip Carregado");
+    tft.setTextColor(BRANCO);
+    tft.setCursor(10, 100);
+    tft.print("Nenhum Chip Carregado");
     return;
   }
 
@@ -237,12 +238,15 @@ void identificarChip() {
   Serial.println(" chips carregados da EEPROM.");
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
+  tft.setCursor(10, 100);
   tft.print(totalChips);
-  tft.print(" Chips carregados");
+  tft.println(" Chips carregados");
   delay(1000);
+  tft.fillScreen(PRETO);
+  tft.setTextColor(BRANCO);
   tft.setTextSize(2);
   tft.setCursor(10, 100);
-  tft.print("identificando");
+  tft.print("identificando...");
 
   bool identificado = false;
 
@@ -273,6 +277,11 @@ void identificarChip() {
 
   if (!identificado) {
     Serial.println("Chip nao identificado.");
+    tft.fillScreen(PRETO);
+    tft.setTextColor(BRANCO);
+    tft.setCursor(10, 100);
+    tft.print("Nenhum Chip");
+    tft.println("Identificado");
   }
 }
 
@@ -391,6 +400,13 @@ void loop() {
       selecionarChip(n);
     } else if (linha.startsWith("Identificar")) {
       identificarChip();
+    } else if (linha.startsWith("Limpar")){
+      for (int i=0;i<4096;i++){
+        EEPROM.write(i,0);
+      }
+      totalChips=0;
+      listaChips=nullptr;
+      Serial.println("EEPROM limpa.");
     }
 
   }
