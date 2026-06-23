@@ -92,7 +92,7 @@ void selecionarChip(int n) {
   int endereco = 1 + (n - 1) * sizeof(Chip);
   EEPROM.get(endereco, c);
 
-  Serial.println("Chip selecionado ----");
+  Serial.println("---- Chip selecionado ----");
   Serial.print("Indice: ");
   Serial.println(n);
   Serial.print("Codigo: ");
@@ -103,21 +103,22 @@ void selecionarChip(int n) {
   Serial.println(c.qtdPinos);
   Serial.print("Qtd Testes: ");
   Serial.println(c.qtdTestes);
+  Serial.println("---------------------------");
 }
 
-void desenharChip() {
+void desenharChip(Chip c) {
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
 
   tft.setTextSize(2);
   tft.setCursor(5, 5);
-  tft.print(nome);
+  tft.print(c.nome);
 
   tft.setTextSize(1);
   tft.setCursor(5, 25);
-  tft.print(codigo);
+  tft.print(c.codigo);
 
-  int metade = qtdPinos / 2;
+  int metade = c.qtdPinos / 2;
   int xRet = 90;
   int yRet = 40;
   int larguraRet = 60;
@@ -131,19 +132,21 @@ void desenharChip() {
     tft.setTextSize(1);
     tft.setCursor(xRet - 11, yPino + 3);
     tft.print(i);
-    tft.setCursor(xRet - 14 - (pinos[i].length() * 6) - 2, yPino + 3);
-    tft.print(pinos[i].substring(0, 5));
+    String nomePino = String(c.nomPinos[i]);
+    tft.setCursor(xRet - 14 - (nomePino.length() * 6) - 2, yPino + 3);
+    tft.print(nomePino.substring(0, 5));
   }
 
   for (int i = 0; i < metade; i++) {
-    int pinoIdx = qtdPinos - 1 - i;
+    int pinoIdx = c.qtdPinos - 1 - i;
     int yPino = yRet + i * 20 + 4;
     tft.drawRect(xRet + larguraRet, yPino, 14, 14, BRANCO);
     tft.setTextSize(1);
     tft.setCursor(xRet + larguraRet + 2, yPino + 3);
     tft.print(pinoIdx);
+    String nomePino = String(c.nomPinos[pinoIdx]);
     tft.setCursor(xRet + larguraRet + 16, yPino + 3);
-    tft.print(pinos[pinoIdx].substring(0, 5));
+    tft.print(nomePino.substring(0, 5));
   }
 }
 
@@ -255,7 +258,7 @@ void identificarChip() {
       Serial.print(" - ");
       Serial.println(c.nome);
       identificado = true;
-      desenharChip();
+      desenharChip(c);
       break;
     }
   }
@@ -331,7 +334,7 @@ void lerSerial(String linha) {
   }
 
   //pula "dir"
-  atual=linha.indexOf(':', linha.indexOf("DIR")+1);
+  atual=linha.indexOf(':', linha.indexOf("DIR")+1)+1;
 
   for (int i = 0; i < qtdPinos/2; i++) {
     prox = linha.indexOf(':', atual);
@@ -340,7 +343,7 @@ void lerSerial(String linha) {
   }
 
   //pula "esq"
-  atual=linha.indexOf(':', linha.indexOf("ESQ")+1);
+  atual=linha.indexOf(':', linha.indexOf("ESQ")+1)+1;
 
   for (int i = 0; i < qtdPinos/2; i++) {
     prox = linha.indexOf(':', atual);
@@ -349,7 +352,7 @@ void lerSerial(String linha) {
   }
 
   //pula "testes"
-  atual=linha.indexOf(':', linha.indexOf("TESTES")+1);
+  atual=linha.indexOf(':', linha.indexOf("TESTES")+1)+1;
 
   //quantidade de testes
   prox = linha.indexOf(':', atual);
@@ -369,7 +372,7 @@ void lerSerial(String linha) {
   Serial.println("Lido: " + codigo + ", " + nome + ", " + String(qtdPinos) + " pinos");
 
   salvarChip(c);
-  desenharChip();
+  desenharChip(c);
 }
 
 void loop() {
