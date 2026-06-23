@@ -12,11 +12,11 @@ String codigo = "";
 int qtdPinos = 0;
 String pinos[32];
 
-typedef struct{
+struct Teste {
   byte valorEsperado[16];
-} Teste;
+};
 
-typedef struct {
+struct Chip {
   char nome[21];
   char codigo[8];
   int qtdPinos;
@@ -25,11 +25,47 @@ typedef struct {
   byte esquerda[8];
   int qtdTestes;
   Teste testes[5];
-}Chip;
+};
+
+struct No {
+  Chip chip;
+  No* proximo;
+};
+
+No* listaChips = nullptr;
+
+void adicionarLista(Chip c) {
+  No* novo = new No();
+  novo->chip = c;
+  novo->proximo = nullptr;
+
+  if (listaChips == nullptr) {
+    listaChips = novo;
+    return;
+  }
+
+  No* atual = listaChips;
+  while (atual->proximo != nullptr) {
+    atual = atual->proximo;
+  }
+  atual->proximo = novo;
+}
 
 const int MAX_CHIPS=(4096-1)/sizeof(Chip);
 
 int totalChips=0;
+
+void carregaChip() {
+  EEPROM.get(0, totalChips);
+  if (totalChips < 0 || totalChips > MAX_CHIPS) totalChips = 0;
+
+  for (int i = 0; i < totalChips; i++) {
+    Chip c;
+    int endereco = 1 + i * sizeof(Chip);
+    EEPROM.get(endereco, c);
+    adicionarLista(c);
+  }
+}
 
 void salvarChip(Chip c){
   if (totalChips>=MAX_CHIPS){
@@ -41,6 +77,7 @@ void salvarChip(Chip c){
   totalChips++;
   EEPROM.put(0,totalChips);
   Serial.println(totalChips);
+  adicionarLista(c);
 }
 
 void setup() {
@@ -48,6 +85,8 @@ void setup() {
   uint16_t id = tft.readID();
   tft.begin(id);
   tft.setRotation(0);
+
+  carregaChip();
 
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
@@ -98,11 +137,12 @@ void lerSerial(String linha) {
     prox = linha.indexOf(':', atual);
     String p=linha.substring(atual, prox);
     pinos[i] = p;
+    p.toCharArray(c.nomPinos[i], 3);
     atual = prox + 1;
   }
 
   //pula "dir"
-  atual=linha.indexOf(':', linha.indexOf('DIR')+1);
+  atual=linha.indexOf(':', linha.indexOf("DIR")+1);
 
   for (int i = 0; i < 8; i++) {
     prox = linha.indexOf(':', atual);
@@ -111,7 +151,7 @@ void lerSerial(String linha) {
   }
 
   //pula "esq"
-  atual=linha.indexOf(':', linha.indexOf('ESQ')+1);
+  atual=linha.indexOf(':', linha.indexOf("ESQ")+1);
 
   for (int i = 0; i < 8; i++) {
     prox = linha.indexOf(':', atual);
@@ -120,11 +160,11 @@ void lerSerial(String linha) {
   }
 
   //pula "testes"
-  atual=linha.indexOf(':', linha.indexOf('TESTES')+1);
+  atual=linha.indexOf(':', linha.indexOf("TESTES")+1);
 
   //quantidade de testes
   prox = linha.indexOf(':', atual);
-  c.qtdPinos=linha.substring(atual, prox).toInt();
+  c.qtdTestes=linha.substring(atual, prox).toInt();
   atual = prox + 1;
 
   for (int t = 0; t < c.qtdTestes; t++) {
