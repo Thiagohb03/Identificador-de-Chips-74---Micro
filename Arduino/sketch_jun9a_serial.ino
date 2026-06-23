@@ -32,7 +32,7 @@ struct No {
 };
 
 No* listaChips = nullptr;
-String atual = " "
+
 void adicionarLista(Chip c) {
   No* novo = new No();
   novo->chip = c;
@@ -87,7 +87,7 @@ void selecionarChip(int n) {
   int endereco = 1 + (n - 1) * sizeof(Chip);
   EEPROM.get(endereco, c);
 
-  Serial.println("---- Chip selecionado ----");
+  Serial.println("Chip selecionado ");
   Serial.print("Indice: ");
   Serial.println(n);
   Serial.print("Codigo: ");
@@ -98,7 +98,6 @@ void selecionarChip(int n) {
   Serial.println(c.qtdPinos);
   Serial.print("Qtd Testes: ");
   Serial.println(c.qtdTestes);
-  Serial.println("---------------------------");
 }
 
 void desenharChip(Chip c) {
@@ -228,11 +227,22 @@ bool executaTeste(Chip c, int pos) {
 void identificarChip() {
   if (totalChips <= 0 || totalChips > MAX_CHIPS) {
     Serial.println("EEPROM vazia ou corrompida.");
+    tft.fillScreen(PRETO);
+  tft.setTextColor(BRANCO);
+  tft.print("Nenhum Chip Carregado");
     return;
   }
 
   Serial.print(totalChips);
   Serial.println(" chips carregados da EEPROM.");
+  tft.fillScreen(PRETO);
+  tft.setTextColor(BRANCO);
+  tft.print(totalChips);
+  tft.print(" Chips carregados");
+  delay(1000);
+  tft.setTextSize(2);
+  tft.setCursor(10, 100);
+  tft.print("identificando");
 
   bool identificado = false;
 
@@ -271,16 +281,15 @@ void setup() {
   uint16_t id = tft.readID();
   tft.begin(id);
   tft.setRotation(0);
-  Serial.println(atual);
   carregaChip();
-  //identificarChip();
+  
 
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
   tft.setTextSize(2);
   tft.setCursor(10, 100);
   tft.print("Iniciando...");
-  delay(3000);
+  delay(1000);
 
   tft.fillScreen(PRETO);
   tft.setTextSize(2);
@@ -290,6 +299,8 @@ void setup() {
   tft.print("e pressione");
   tft.setCursor(20, 140);
   tft.print("o botao");
+  delay(1000);
+  identificarChip();
 }
 
 //CHIP:74283:Somador:14:A1:A2:A3:A4:A5:A6:A7:D1:D2:D3:D4:D5:D6:D7:DIR:0:1:2:1:0:2:1:0:ESQ:1:0:1:2:0:1:2:1:TESTES:2:0101010101010101:1010101010101010
@@ -373,7 +384,6 @@ void loop() {
   if (Serial.available() > 0) {
     String linha = Serial.readStringUntil('\n');
     linha.trim();
-    atual = linha;
     if (linha.startsWith("CHIP:")) {
       lerSerial(linha);
     } else if (linha.startsWith("Selecionar:")) {
