@@ -80,6 +80,31 @@ void salvarChip(Chip c){
   adicionarLista(c);
 }
 
+// Lê um chip salvo na EEPROM pelo índice (n=1 é o primeiro chip salvo)
+// e imprime os dados dele na Serial, sem alterar o display.
+void selecionarChip(int n) {
+  if (n < 1 || n > totalChips) {
+    Serial.println("ERRO: indice de chip invalido.");
+    return;
+  }
+
+  Chip c;
+  int endereco = 1 + (n - 1) * sizeof(Chip);
+  EEPROM.get(endereco, c);
+
+  Serial.println("Chip selecionado ----");
+  Serial.print("Indice: ");
+  Serial.println(n);
+  Serial.print("Codigo: ");
+  Serial.println(c.codigo);
+  Serial.print("Nome: ");
+  Serial.println(c.nome);
+  Serial.print("Qtd Pinos: ");
+  Serial.println(c.qtdPinos);
+  Serial.print("Qtd Testes: ");
+  Serial.println(c.qtdTestes);
+}
+
 void desenharChip() {
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
@@ -354,8 +379,10 @@ void loop() {
     atual = linha;
     if (linha.startsWith("CHIP:")) {
       lerSerial(linha);
+    } else if (linha.startsWith("Selecionar:")) {
+      int n = linha.substring(linha.indexOf(':') + 1).toInt();
+      selecionarChip(n);
     }
-    if(linha.startsWith("Selecionar:"))
 
   }
 }
