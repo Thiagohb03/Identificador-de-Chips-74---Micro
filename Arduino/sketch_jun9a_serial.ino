@@ -158,30 +158,31 @@ int mapeamento(int indicePino) {
 
 
 // Execução de um teste único, usando direita[]/esquerda[] como tipo
-// tipo: 0 = saida, 1 = entrada, 2 = nao usado
+// tipo de pino: 0 = saida do chip, 1 = entrada do chip, 2 = nao usado
+// valor no teste: 0 = LOW, 1 = HIGH, 2 = don't care (nao aplicar / nao validar)
 
 bool executaTeste(Chip c, int pos) {
 
   // 1. Configura saídas do chip (leitura) como INPUT primeiro,
   //    para evitar conflito elétrico com o Arduino
   for (int i = 0; i < 8; i++) {
-    if (c.esquerda[i] == 0) {  // saida
+    if (c.esquerda[i] == 0) {
       int megaPin = mapeamento(i);
       if (megaPin == -1) return false;
       pinMode(megaPin, INPUT);
     }
   }
   for (int i = 0; i < 8; i++) {
-    if (c.direita[i] == 0) {  // saida
+    if (c.direita[i] == 0) {
       int megaPin = mapeamento(8 + i);
       if (megaPin == -1) return false;
       pinMode(megaPin, INPUT);
     }
   }
 
-  // 2. Aplica as entradas
+  // 2. Aplica as entradas — pula pinos marcados como don't care (valor 2)
   for (int i = 0; i < 8; i++) {
-    if (c.esquerda[i] == 1) {  // entrada
+    if (c.esquerda[i] == 1 && c.testes[pos].valorEsperado[i] != 2) {
       int megaPin = mapeamento(i);
       if (megaPin == -1) return false;
       pinMode(megaPin, OUTPUT);
@@ -189,7 +190,7 @@ bool executaTeste(Chip c, int pos) {
     }
   }
   for (int i = 0; i < 8; i++) {
-    if (c.direita[i] == 1) {  // entrada
+    if (c.direita[i] == 1 && c.testes[pos].valorEsperado[8 + i] != 2) {
       int megaPin = mapeamento(8 + i);
       if (megaPin == -1) return false;
       pinMode(megaPin, OUTPUT);
@@ -199,9 +200,9 @@ bool executaTeste(Chip c, int pos) {
 
   delay(100);
 
-  // 3. Lê e valida as saídas
+  // 3. Lê e valida as saídas — pula pinos marcados como don't care (valor 2)
   for (int i = 0; i < 8; i++) {
-    if (c.esquerda[i] == 0) {  // saida
+    if (c.esquerda[i] == 0 && c.testes[pos].valorEsperado[i] != 2) {
       int megaPin = mapeamento(i);
       int valorLido = digitalRead(megaPin);
       if (valorLido != c.testes[pos].valorEsperado[i]) {
@@ -210,7 +211,7 @@ bool executaTeste(Chip c, int pos) {
     }
   }
   for (int i = 0; i < 8; i++) {
-    if (c.direita[i] == 0) {  // saida
+    if (c.direita[i] == 0 && c.testes[pos].valorEsperado[8 + i] != 2) {
       int megaPin = mapeamento(8 + i);
       int valorLido = digitalRead(megaPin);
       if (valorLido != c.testes[pos].valorEsperado[8 + i]) {
