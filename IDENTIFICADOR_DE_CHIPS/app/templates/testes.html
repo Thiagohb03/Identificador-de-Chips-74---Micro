@@ -10,7 +10,7 @@
 <h1>Testes do Chip</h1>
 
 <div class="caixa">
-    <a href="/">Voltar</a>
+    <a href="/" class="btn-nav">Voltar</a>
     <br><br>
     <b>{{ chip.name }}</b> - Código {{ chip.code }} - {{ chip.pin_count }} pinos
 </div>
@@ -25,6 +25,7 @@
         <select id="teste-e-{{ pino }}">
             <option value="0">0</option>
             <option value="1">1</option>
+            <option value="2">Não incluir</option>
         </select>
     {% endfor %}
 
@@ -35,6 +36,7 @@
         <select id="teste-s-{{ pino }}">
             <option value="0">0</option>
             <option value="1">1</option>
+            <option value="2">Não incluir</option>
         </select>
     {% endfor %}
 
@@ -56,6 +58,7 @@
     qtdPinosChip      = {{ chip.pin_count }};
     pinosTesteEntrada = {{ chip.input_pins | tojson }};
     pinosTesteSaida   = {{ chip.output_pins | tojson }};
+    nomesPinos        = {{ chip.pin_names | tojson }};
     testesAtuais      = {{ chip_tests | tojson }};
     renderizarTestes();
 </script>

@@ -15,14 +15,19 @@ app = Flask(__name__,
             static_folder="app/templates/static")
 
 
-# Rota principal: abre a página inicial
-# Lê o parâmetro ?qtd_pinos= da URL para saber quantos pinos desenhar
+# Rota principal: lista de chips salvos
 @app.route("/")
 def index():
+    return render_template("index.html")
+
+
+# Rota de cadastro de novo chip
+@app.route("/cadastrar")
+def cadastrar():
     qtd_pinos = int(request.args.get("qtd_pinos", 14))
     if qtd_pinos not in (14, 16):
         qtd_pinos = 14
-    return render_template("index.html", qtd_pinos=qtd_pinos)
+    return render_template("cadastrar.html", qtd_pinos=qtd_pinos)
 
 
 # Retorna a lista de todos os chips salvos (em formato JSON)
