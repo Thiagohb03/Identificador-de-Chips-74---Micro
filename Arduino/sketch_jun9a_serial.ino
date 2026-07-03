@@ -56,7 +56,7 @@ void carregaChip() {
 
   for (int i = 0; i < totalChips; i++) {
     Chip c;
-    int endereco = 1 + i * sizeof(Chip);
+    int endereco = 2 + i * sizeof(Chip);
     EEPROM.get(endereco, c);
     adicionarLista(c);
   }
@@ -67,7 +67,7 @@ void salvarChip(Chip c){
     Serial.println("ERRO: Banco cheio");
     return;
   }
-  int endereco =1+(totalChips*sizeof(Chip));
+  int endereco =2+(totalChips*sizeof(Chip));
   EEPROM.put(endereco,c);
   totalChips++;
   EEPROM.put(0,totalChips);
@@ -292,7 +292,7 @@ void identificarChip() {
 
 void setup() {
   Serial.begin(9600);
-  Serial.setTimeout(10000);
+  Serial.setTimeout(1000);
   uint16_t id = tft.readID();
   tft.begin(id);
   tft.setRotation(0);
@@ -411,11 +411,9 @@ void loop() {
     } else if (linha.startsWith("Identificar")) {
       identificarChip();
     } else if (linha.startsWith("Limpar")){
-      for (int i=0;i<4096;i++){
-        EEPROM.write(i,0);
-      }
-      totalChips=0;
-      listaChips=nullptr;
+      totalChips = 0;
+      EEPROM.put(0, totalChips);
+      listaChips = nullptr;
       Serial.println("EEPROM limpa.");
     }
 
