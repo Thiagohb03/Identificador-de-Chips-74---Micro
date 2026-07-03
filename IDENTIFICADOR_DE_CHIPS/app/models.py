@@ -79,6 +79,18 @@ class Chip:
     def add_test(self, test: TestCase):
         self.tests.append(test)
 
+    # Tipo de pino no protocolo: 0 = saida do chip (Arduino le),
+    # 1 = entrada do chip (Arduino escreve), 2 = nao classificado.
+    # VCC e GND sao sempre tratados como entrada (Arduino aplica o nivel fixo).
+    def _tipo_pino(self, pino: int) -> str:
+        if pino in (self.vcc_pin(), self.gnd_pin()):
+            return "1"
+        if pino in self.input_pins:
+            return "1"
+        if pino in self.output_pins:
+            return "0"
+        return "2"
+
     def to_arduino_protocol(self) -> str:
         parts = ["CHIP", str(self.code), self.name, str(self.pin_count)]
 
@@ -95,27 +107,12 @@ class Chip:
         parts.append("DIR")
         for i in range(self.pin_count // 2):
             pino = self.pin_count - 1 - i
-            if pino in (self.vcc_pin(), self.gnd_pin()):
-                parts.append("2")
-            elif pino in self.input_pins:
-                parts.append("0")
-            elif pino in self.output_pins:
-                parts.append("1")
-            else:
-                parts.append("2")
+            parts.append(self._tipo_pino(pino))
 
         # ESQ: pinos da esquerda, do topo para baixo
         parts.append("ESQ")
         for i in range(self.pin_count // 2):
-            pino = i
-            if pino in (self.vcc_pin(), self.gnd_pin()):
-                parts.append("2")
-            elif pino in self.input_pins:
-                parts.append("0")
-            elif pino in self.output_pins:
-                parts.append("1")
-            else:
-                parts.append("2")
+            parts.append(self._tipo_pino(i))
 
         # TESTES
         parts.append("TESTES")
@@ -123,7 +120,9 @@ class Chip:
         for test in self.tests:
             test_str = ""
             for i in range(self.pin_count):
-                if i in (self.vcc_pin(), self.gnd_pin()):
+                if i == self.vcc_pin():
+                    test_str += "1"
+                elif i == self.gnd_pin():
                     test_str += "0"
                 elif i in self.input_pins:
                     test_str += str(test.inputs.get(str(i), test.inputs.get(i, 0)))

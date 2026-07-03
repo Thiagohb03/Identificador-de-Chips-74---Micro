@@ -158,8 +158,11 @@ int mapeamento(int indicePino) {
 
 
 // Execução de um teste único, usando direita[]/esquerda[] como tipo
-// tipo de pino: 0 = saida do chip, 1 = entrada do chip, 2 = nao usado
+// tipo de pino: 0 = saida do chip, 1 = entrada do chip, 2 = nao classificado
 // valor no teste: 0 = LOW, 1 = HIGH, 2 = don't care (nao aplicar / nao validar)
+// VCC e GND chegam do Python sempre como tipo 1 (entrada), com valor fixo
+// VCC=1 e GND=0 na string de teste — nao precisam de tratamento especial aqui,
+// o Arduino so os enxerga como mais um pino de entrada.
 
 bool executaTeste(Chip c, int pos) {
 
@@ -313,7 +316,7 @@ void setup() {
   tft.print("Identificar");
 }
 
-//CHIP:7408:AND_Quad:14:1A:1B:1Y:2A:2B:2Y:GND:VCC:4B:4A:4Y:3B:3A:3Y:DIR:2:1:1:0:1:1:0:ESQ:1:1:0:1:1:0:2:TESTES:2:11111100111111:10011100111000
+//CHIP:7408:AND_Quad:14:A1:B1:Y1:A2:B2:Y2:GND:Y3:A3:B3:Y4:A4:B4:VCC:DIR:1:1:1:0:1:1:0:ESQ:1:1:0:1:1:0:1:TESTES:1:11111101111111
 void lerSerial(String linha) {
   Chip c;
 
@@ -348,11 +351,18 @@ void lerSerial(String linha) {
   }
 
   //pula "dir"
+  // O protocolo manda DIR do maior indice de pino para o menor (topo->baixo),
+  // mas executaTeste le direita[i] junto com mapeamento(8+i)/valorEsperado(8+i)
+  // (indice crescente a partir do pino 8), entao a ordem de gravacao e
+  // invertida aqui para os dois ficarem alinhados. Isso fecha certo para
+  // chips de 16 pinos; para chips de 14 pinos ainda ha um desalinhamento de
+  // 1 posicao porque mapeamento(8+i) assume sempre um soquete de 16 pinos
+  // (ver conversa/memoria do projeto).
   atual=linha.indexOf(':', linha.indexOf("DIR")+1)+1;
 
   for (int i = 0; i < qtdPinos/2; i++) {
     prox = linha.indexOf(':', atual);
-    c.direita[i] = linha.substring(atual, prox).toInt();
+    c.direita[qtdPinos/2 - 1 - i] = linha.substring(atual, prox).toInt();
     atual = prox + 1;
   }
 
