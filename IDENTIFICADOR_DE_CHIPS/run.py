@@ -123,7 +123,7 @@ def enviar_todos_serial():
 
     try:
         from serial import Serial
-        meu_serial = Serial("/dev/serial0", baudrate=9600)
+        meu_serial = Serial("COM17", baudrate=9600)
         for chip in chips:
             texto = chip.to_arduino_protocol() + "\n"
             meu_serial.write(texto.encode("UTF-8"))
