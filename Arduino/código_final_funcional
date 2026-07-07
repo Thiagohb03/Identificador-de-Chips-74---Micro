@@ -9,22 +9,24 @@ GFButton botao(24);
 MCUFRIEND_kbv tft;
 
 #define BRANCO 0xFFFF
-#define PRETO  0x0000
+#define PRETO 0x0000
 
-#define MAX_TESTES 10
+#define MAX_TESTES 10  // maximo de baterias de teste por chip
 
-const int END_TOTAL_CHIPS  = 0;
-const int END_INICIO_CHIPS = sizeof(int);
+const int END_TOTAL_CHIPS = 0;  // onde fica salvo o total de chips
+const int END_INICIO_CHIPS = sizeof(int);  // onde comecam os dados dos chips
 
+// Guarda os valores esperados em uma bateria de teste.
 struct Teste {
   byte valorEsperado[16];
 };
 
+// Guarda todos os dados de um chip cadastrado.
 struct Chip {
   char nome[21];
   char codigo[8];
   int qtdPinos;
-  char nomPinos[16][3];
+  char nomPinos[16][4];  // até 3 caracteres + fim de texto
   byte direita[8];
   byte esquerda[8];
   int qtdTestes;
@@ -33,31 +35,36 @@ struct Chip {
 
 int totalChips = 0;
 
+// No da lista encadeada usada em RAM.
 struct No {
   Chip chip;
-  No* proximo;
+  No *proximo;
 };
 
-No* listaChips = nullptr;
+No *listaChips = nullptr;
 
+// Calcula quantos chips cabem na EEPROM.
 int maxChips() {
   return (EEPROM.length() - END_INICIO_CHIPS) / sizeof(Chip);
 }
 
+// Calcula o endereco de um chip dentro da EEPROM.
 int enderecoChip(int indice) {
   return END_INICIO_CHIPS + indice * sizeof(Chip);
 }
 
+// Limpa a lista em RAM antes de recarregar os chips.
 void limparLista() {
-  No* atual = listaChips;
+  No *atual = listaChips;
   while (atual != nullptr) {
-    No* prox = atual->proximo;
+    No *prox = atual->proximo;
     delete atual;
     atual = prox;
   }
   listaChips = nullptr;
 }
 
+// Zera o chip e deixa todos os testes como ignorados.
 void inicializarChip(Chip &c) {
   memset(&c, 0, sizeof(Chip));
 
@@ -76,8 +83,9 @@ void inicializarChip(Chip &c) {
   }
 }
 
+// Adiciona um chip na lista encadeada em RAM.
 void adicionarLista(Chip c) {
-  No* novo = new No();
+  No *novo = new No();
   if (novo == nullptr) {
     Serial.println("ERRO: sem memoria RAM para lista.");
     return;
@@ -91,13 +99,14 @@ void adicionarLista(Chip c) {
     return;
   }
 
-  No* atual = listaChips;
+  No *atual = listaChips;
   while (atual->proximo != nullptr) {
     atual = atual->proximo;
   }
   atual->proximo = novo;
 }
 
+// Carrega da EEPROM para a lista em RAM.
 void carregaChip() {
   limparLista();
 
@@ -120,6 +129,7 @@ void carregaChip() {
   }
 }
 
+// Salva um chip novo no fim da EEPROM.
 void salvarChip(Chip c) {
   if (totalChips >= maxChips()) {
     Serial.println("ERRO: Banco cheio");
@@ -138,6 +148,7 @@ void salvarChip(Chip c) {
   adicionarLista(c);
 }
 
+// Mostra os dados basicos de um chip salvo pelo indice.
 void selecionarChip(int n) {
   if (n < 1 || n > totalChips) {
     Serial.println("ERRO: indice de chip invalido.");
@@ -162,6 +173,7 @@ void selecionarChip(int n) {
   Serial.println(c.qtdTestes);
 }
 
+// Desenha o chip identificado no display.
 void desenharChip(Chip c) {
   tft.fillScreen(PRETO);
   tft.setTextColor(BRANCO);
@@ -208,70 +220,92 @@ void desenharChip(Chip c) {
   }
 }
 
-// Mapeamento entre pino logico do chip e pino fisico do Arduino Mega.
-// Cada indice do array e o pino logico do chip usado pelo sistema.
-// Cada valor e o pino digital do Arduino Mega ligado naquele pino do chip.
+// Mapeamento dos pinos do CI para os pinos digitais do Arduino.
+// O indice representa o pino do CI no sistema, começando em 0.
+// Exemplo: pino 0 = pino fisico 1 do CI.
 //
-// Para chip DIP-14 no seu sistema:
-// pino logico 0  = pino fisico 1  do CI
-// pino logico 1  = pino fisico 2  do CI
-// pino logico 2  = pino fisico 3  do CI
-// pino logico 3  = pino fisico 4  do CI
-// pino logico 4  = pino fisico 5  do CI
-// pino logico 5  = pino fisico 6  do CI
-// pino logico 6  = pino fisico 7  do CI = GND
-// pino logico 7  = pino fisico 8  do CI
-// pino logico 8  = pino fisico 9  do CI
-// pino logico 9  = pino fisico 10 do CI
-// pino logico 10 = pino fisico 11 do CI
-// pino logico 11 = pino fisico 12 do CI
-// pino logico 12 = pino fisico 13 do CI
-// pino logico 13 = pino fisico 14 do CI = VCC
+// DIP-14:
+// lado esquerdo: pinos 0 a 6
+// lado direito:  pinos 7 a 13
 //
-// Mantive seu mapeamento atual. Para 14 pinos, apenas indices 0..13 sao usados.
-// Os indices 14 e 15 ficam -1 para nao usar D0 por acidente.
-const int pinoMega[16] = {
-  53, // pino logico 0
-  51, // pino logico 1
-  47, // pino logico 2
-  45, // pino logico 3
-  52, // pino logico 4
-  50, // pino logico 5
-  48, // pino logico 6
-
-  43, // pino logico 7  -> Arduino D43
-  41, // pino logico 8  -> Arduino D41
-  39, // pino logico 9  -> Arduino D39
-  37, // pino logico 10 -> Arduino D37
-  35, // pino logico 11 -> Arduino D35
-  33, // pino logico 12 -> Arduino D33
-  31, // pino logico 13 -> Arduino D31 = VCC do CI DIP-14
-
-  -1, // pino logico 14 -> sem mapeamento por enquanto
-  -1  // pino logico 15 -> sem mapeamento por enquanto
+// DIP-16:
+// lado esquerdo: pinos 0 a 7
+// lado direito:  pinos 8 a 15
+//
+// No DIP-16, os pinos extras entram no meio:
+// pino 7 -> ultimo pino do lado esquerdo
+// pino 8 -> primeiro pino do lado direito
+const int pinoMega14[14] = {
+  53,  // pino 0
+  51,  // pino 1
+  47,  // pino 2
+  45,  // pino 3
+  52,  // pino 4
+  50,  // pino 5
+  48,  // pino 6 = GND no DIP-14
+  43,  // pino 7
+  41,  // pino 8
+  39,  // pino 9
+  37,  // pino 10
+  35,  // pino 11
+  33,  // pino 12
+  31   // pino 13 = VCC no DIP-14
 };
 
-int mapeamento(int indicePino) {
-  if (indicePino < 0 || indicePino >= 16) {
+const int pinoMega16[16] = {
+  53,  // pino 0
+  51,  // pino 1
+  47,  // pino 2
+  45,  // pino 3
+  52,  // pino 4
+  50,  // pino 5
+  48,  // pino 6
+  46,  // pino 7 = GND no DIP-16
+
+  26,  // pino 8
+  43,  // pino 9
+  41,  // pino 10
+  39,  // pino 11
+  37,  // pino 12
+  35,  // pino 13
+  33,  // pino 14
+  31   // pino 15 = VCC no DIP-16
+};
+
+// Retorna o pino digital do Arduino correspondente ao pino do CI.
+// Usa um mapa para DIP-14 e outro para DIP-16.
+int mapeamento(const Chip &c, int indicePino) {
+  if (indicePino < 0 || indicePino >= c.qtdPinos) {
     return -1;
   }
-  return pinoMega[indicePino];
+
+  if (c.qtdPinos == 14) {
+    return pinoMega14[indicePino];
+  }
+
+  if (c.qtdPinos == 16) {
+    return pinoMega16[indicePino];
+  }
+
+  return -1;
 }
 
-byte tipoPino(const Chip &c, int pinoLogico) {
+// Retorna o tipo do pino: 1 entrada, 0 saida, 2 ignorado.
+byte tipoPino(const Chip &c, int pino) {
   int metade = c.qtdPinos / 2;
 
-  if (pinoLogico < 0 || pinoLogico >= c.qtdPinos) {
+  if (pino < 0 || pino >= c.qtdPinos) {
     return 2;
   }
 
-  if (pinoLogico < metade) {
-    return c.esquerda[pinoLogico];
+  if (pino < metade) {
+    return c.esquerda[pino];
   }
 
-  return c.direita[pinoLogico - metade];
+  return c.direita[pino - metade];
 }
 
+// Imprime 0, 1 ou NC na Serial.
 void imprimirValor(byte valor) {
   if (valor == 0) {
     Serial.print("0");
@@ -282,6 +316,7 @@ void imprimirValor(byte valor) {
   }
 }
 
+// Imprime o significado do tipo do pino.
 void imprimirTipo(byte tipo) {
   if (tipo == 1) {
     Serial.print("ENTRADA_CHIP / Arduino ESCREVE");
@@ -292,34 +327,36 @@ void imprimirTipo(byte tipo) {
   }
 }
 
-void imprimirNomePino(const Chip &c, int pinoLogico) {
-  if (strlen(c.nomPinos[pinoLogico]) > 0) {
-    Serial.print(c.nomPinos[pinoLogico]);
+// Imprime o nome cadastrado do pino.
+void imprimirNomePino(const Chip &c, int pino) {
+  if (strlen(c.nomPinos[pino]) > 0) {
+    Serial.print(c.nomPinos[pino]);
   } else {
     Serial.print("sem_nome");
   }
 }
 
-void imprimirPinoTeste(const Chip &c, int testeIndice, int pinoLogico) {
-  byte valor = c.testes[testeIndice].valorEsperado[pinoLogico];
+// Detalha um pino dentro de um teste especifico.
+void imprimirPinoTeste(const Chip &c, int testeIndice, int pino) {
+  byte valor = c.testes[testeIndice].valorEsperado[pino];
 
   if (valor == 2) {
     return;
   }
 
-  byte tipo = tipoPino(c, pinoLogico);
-  int megaPin = mapeamento(pinoLogico);
+  byte tipo = tipoPino(c, pino);
+  int megaPin = mapeamento(c, pino);
   int metade = c.qtdPinos / 2;
 
-  Serial.print("    Pino logico ");
-  Serial.print(pinoLogico);
+  Serial.print("    Pino ");
+  Serial.print(pino);
 
   Serial.print(" (");
-  imprimirNomePino(c, pinoLogico);
+  imprimirNomePino(c, pino);
   Serial.print(")");
 
   Serial.print(" | Lado: ");
-  if (pinoLogico < metade) {
+  if (pino < metade) {
     Serial.print("ESQ");
   } else {
     Serial.print("DIR");
@@ -350,14 +387,15 @@ void imprimirPinoTeste(const Chip &c, int testeIndice, int pinoLogico) {
   Serial.println();
 }
 
+// Mostra quais pinos foram cadastrados como entrada ou saida.
 void imprimirDirecoesSalvas(const Chip &c) {
   int metade = c.qtdPinos / 2;
 
-  Serial.println("  Direcoes salvas considerando pino logico:");
+  Serial.println("  Direcoes salvas considerando pino:");
 
   Serial.print("    ESQ: ");
   for (int i = 0; i < metade; i++) {
-    Serial.print("p");
+    Serial.print("pino ");
     Serial.print(i);
     Serial.print("=");
     Serial.print(c.esquerda[i]);
@@ -367,9 +405,9 @@ void imprimirDirecoesSalvas(const Chip &c) {
 
   Serial.print("    DIR: ");
   for (int i = 0; i < metade; i++) {
-    int pinoLogico = metade + i;
-    Serial.print("p");
-    Serial.print(pinoLogico);
+    int pino = metade + i;
+    Serial.print("pino ");
+    Serial.print(pino);
     Serial.print("=");
     Serial.print(c.direita[i]);
     if (i < metade - 1) Serial.print(", ");
@@ -377,6 +415,8 @@ void imprimirDirecoesSalvas(const Chip &c) {
   Serial.println();
 }
 
+// Lista apenas o resumo dos chips salvos.
+// Nao mostra todas as baterias de testes para nao poluir a serial.
 void listarChipsETestes() {
   int totalEeprom = 0;
   EEPROM.get(END_TOTAL_CHIPS, totalEeprom);
@@ -414,75 +454,62 @@ void listarChipsETestes() {
     Serial.println();
     Serial.print("Chip #");
     Serial.println(i + 1);
-    Serial.print("  Endereco EEPROM: ");
-    Serial.println(enderecoChip(i));
+
     Serial.print("  Codigo: ");
     Serial.println(c.codigo);
+
     Serial.print("  Nome: ");
     Serial.println(c.nome);
+
     Serial.print("  Qtd pinos: ");
     Serial.println(c.qtdPinos);
-    Serial.print("  Qtd testes: ");
+
+    Serial.print("  Qtd testes cadastrados: ");
     Serial.println(c.qtdTestes);
 
     if (!(c.qtdPinos == 14 || c.qtdPinos == 16)) {
-      Serial.println("  ERRO: chip com qtdPinos invalida. Pulando detalhes.");
+      Serial.println("  ERRO: chip com qtdPinos invalida.");
       continue;
     }
 
     if (c.qtdTestes < 0 || c.qtdTestes > MAX_TESTES) {
-      Serial.println("  ERRO: qtdTestes invalida. Pulando detalhes.");
+      Serial.println("  ERRO: qtdTestes invalida.");
       continue;
     }
 
     imprimirDirecoesSalvas(c);
-
-    if (c.qtdTestes == 0) {
-      Serial.println("  Nenhum teste cadastrado para este chip.");
-      continue;
-    }
-
-    for (int t = 0; t < c.qtdTestes; t++) {
-      Serial.println();
-      Serial.print("  Teste #");
-      Serial.println(t + 1);
-      Serial.println("  Pinos considerados no teste:");
-
-      bool algumPino = false;
-      for (int pino = 0; pino < c.qtdPinos; pino++) {
-        if (c.testes[t].valorEsperado[pino] != 2) {
-          algumPino = true;
-          imprimirPinoTeste(c, t, pino);
-        }
-      }
-
-      if (!algumPino) {
-        Serial.println("    Nenhum pino incluido neste teste.");
-      }
-    }
   }
 
   Serial.println("=================================================");
 }
 
+// Retorna o pino de GND no padrao usado pelo projeto.
+// DIP-14: GND no pino 6.
+// DIP-16: GND no pino 7.
 int pinoGND(const Chip &c) {
   if (c.qtdPinos == 14) return 6;
   if (c.qtdPinos == 16) return 7;
   return -1;
 }
 
+// Retorna o pino de VCC no padrao usado pelo projeto.
+// DIP-14: VCC no pino 13.
+// DIP-16: VCC no pino 15.
 int pinoVCC(const Chip &c) {
-  if (c.qtdPinos == 14 || c.qtdPinos == 16) return c.qtdPinos - 1;
+  if (c.qtdPinos == 14) return 13;
+  if (c.qtdPinos == 16) return 15;
   return -1;
 }
 
-bool ehPinoAlimentacao(const Chip &c, int pinoLogico) {
-  return pinoLogico == pinoGND(c) || pinoLogico == pinoVCC(c);
+// Verifica se o pino e GND ou VCC.
+bool ehPinoAlimentacao(const Chip &c, int pino) {
+  return pino == pinoGND(c) || pino == pinoVCC(c);
 }
 
+// Desliga todos os pinos do chip e coloca como entrada.
 void desligarTodosPinosDoChip(const Chip &c) {
   for (int pino = 0; pino < c.qtdPinos; pino++) {
-    int megaPin = mapeamento(pino);
+    int megaPin = mapeamento(c, pino);
     if (megaPin != -1) {
       digitalWrite(megaPin, LOW);
       pinMode(megaPin, INPUT);
@@ -490,23 +517,33 @@ void desligarTodosPinosDoChip(const Chip &c) {
   }
 }
 
+// Coloca um pino do Arduino em alta impedancia.
+void liberarPinoArduino(int megaPin) {
+  if (megaPin != -1) {
+    digitalWrite(megaPin, LOW);
+    pinMode(megaPin, INPUT);
+  }
+}
+
+// Libera todos os pinos usados nos mapas DIP-14 e DIP-16.
 void liberarTodosPinosMapeados() {
+  for (int i = 0; i < 14; i++) {
+    liberarPinoArduino(pinoMega14[i]);
+  }
+
   for (int i = 0; i < 16; i++) {
-    int megaPin = mapeamento(i);
-    if (megaPin != -1) {
-      digitalWrite(megaPin, LOW);
-      pinMode(megaPin, INPUT);
-    }
+    liberarPinoArduino(pinoMega16[i]);
   }
 }
 
+// Libera apenas os pinos de sinal, mantendo GND e VCC fora.
 void liberarPinosDeSinal(const Chip &c) {
   for (int pino = 0; pino < c.qtdPinos; pino++) {
     if (ehPinoAlimentacao(c, pino)) {
       continue;
     }
 
-    int megaPin = mapeamento(pino);
+    int megaPin = mapeamento(c, pino);
     if (megaPin != -1) {
       digitalWrite(megaPin, LOW);
       pinMode(megaPin, INPUT);
@@ -514,12 +551,13 @@ void liberarPinosDeSinal(const Chip &c) {
   }
 }
 
+// Liga GND em LOW e VCC em HIGH antes dos testes.
 bool aplicarAlimentacao(const Chip &c) {
   int gnd = pinoGND(c);
   int vcc = pinoVCC(c);
 
-  int megaGND = mapeamento(gnd);
-  int megaVCC = mapeamento(vcc);
+  int megaGND = mapeamento(c, gnd);
+  int megaVCC = mapeamento(c, vcc);
 
   if (megaGND == -1 || megaVCC == -1) {
     Serial.println("ERRO: GND ou VCC sem mapeamento.");
@@ -537,12 +575,13 @@ bool aplicarAlimentacao(const Chip &c) {
   return true;
 }
 
+// Desliga GND e VCC depois do teste.
 void desligarAlimentacao(const Chip &c) {
   int gnd = pinoGND(c);
   int vcc = pinoVCC(c);
 
-  int megaGND = mapeamento(gnd);
-  int megaVCC = mapeamento(vcc);
+  int megaGND = mapeamento(c, gnd);
+  int megaVCC = mapeamento(c, vcc);
 
   if (megaGND != -1) {
     digitalWrite(megaGND, LOW);
@@ -555,6 +594,7 @@ void desligarAlimentacao(const Chip &c) {
   }
 }
 
+// Executa uma bateria de teste de um chip.
 bool executaTeste(const Chip &c, int pos) {
   if (pos < 0 || pos >= c.qtdTestes || pos >= MAX_TESTES) {
     return false;
@@ -579,7 +619,7 @@ bool executaTeste(const Chip &c, int pos) {
     }
 
     if (tipoPino(c, pino) == 0) {
-      int megaPin = mapeamento(pino);
+      int megaPin = mapeamento(c, pino);
       if (megaPin == -1) {
         testeOk = false;
         break;
@@ -597,7 +637,7 @@ bool executaTeste(const Chip &c, int pos) {
       }
 
       if (tipoPino(c, pino) == 1 && c.testes[pos].valorEsperado[pino] != 2) {
-        int megaPin = mapeamento(pino);
+        int megaPin = mapeamento(c, pino);
         if (megaPin == -1) {
           testeOk = false;
           break;
@@ -618,7 +658,7 @@ bool executaTeste(const Chip &c, int pos) {
       }
 
       if (tipoPino(c, pino) == 0 && c.testes[pos].valorEsperado[pino] != 2) {
-        int megaPin = mapeamento(pino);
+        int megaPin = mapeamento(c, pino);
         if (megaPin == -1) {
           testeOk = false;
           break;
@@ -640,6 +680,7 @@ bool executaTeste(const Chip &c, int pos) {
   return testeOk;
 }
 
+// Tenta identificar o chip comparando com todos os cadastrados.
 void identificarChip() {
   Serial.println("INICIO_IDENTIFICAR");
 
@@ -677,7 +718,7 @@ void identificarChip() {
   Chip chipIdentificado;
   inicializarChip(chipIdentificado);
 
-  No* atual = listaChips;
+  No *atual = listaChips;
   while (atual != nullptr) {
     Chip &c = atual->chip;
 
@@ -738,6 +779,7 @@ void identificarChip() {
   Serial.println("FIM_IDENTIFICAR");
 }
 
+// Le o proximo campo separado por ':' na string recebida.
 String proximoCampo(const String &linha, int &atual) {
   int prox = linha.indexOf(':', atual);
 
@@ -752,6 +794,7 @@ String proximoCampo(const String &linha, int &atual) {
   return campo;
 }
 
+// Le a string CHIP enviada pela Serial e salva o cadastro.
 bool lerSerial(String linha) {
   Chip c;
   inicializarChip(c);
@@ -791,8 +834,8 @@ bool lerSerial(String linha) {
   }
 
   for (int i = 0; i < metade; i++) {
-    int pinoLogico = c.qtdPinos - 1 - i;
-    int indiceDireita = pinoLogico - metade;
+    int pino = c.qtdPinos - 1 - i;
+    int indiceDireita = pino - metade;
     c.direita[indiceDireita] = proximoCampo(linha, atual).toInt();
   }
 
@@ -852,6 +895,7 @@ bool lerSerial(String linha) {
   return true;
 }
 
+// Apaga o banco de chips na EEPROM.
 void limparBanco() {
   totalChips = 0;
   EEPROM.put(END_TOTAL_CHIPS, totalChips);
@@ -859,10 +903,12 @@ void limparBanco() {
   Serial.println("EEPROM limpa.");
 }
 
+// Funcao chamada pela biblioteca quando o botao recebe um clique.
 void aoApertar(GFButton &btn) {
   identificarChip();
 }
 
+// Configuracao inicial do Arduino, display, EEPROM e botao.
 void setup() {
   Serial.begin(9600);
   Serial.setTimeout(1000);
@@ -898,6 +944,7 @@ void setup() {
   Serial.println(maxChips());
 }
 
+// Loop principal: processa botao e comandos da Serial.
 void loop() {
   botao.process();
   if (Serial.available() > 0) {
