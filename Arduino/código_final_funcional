@@ -305,184 +305,6 @@ byte tipoPino(const Chip &c, int pino) {
   return c.direita[pino - metade];
 }
 
-// Imprime 0, 1 ou NC na Serial.
-void imprimirValor(byte valor) {
-  if (valor == 0) {
-    Serial.print("0");
-  } else if (valor == 1) {
-    Serial.print("1");
-  } else {
-    Serial.print("NC");
-  }
-}
-
-// Imprime o significado do tipo do pino.
-void imprimirTipo(byte tipo) {
-  if (tipo == 1) {
-    Serial.print("ENTRADA_CHIP / Arduino ESCREVE");
-  } else if (tipo == 0) {
-    Serial.print("SAIDA_CHIP / Arduino LE");
-  } else {
-    Serial.print("NAO_CLASSIFICADO");
-  }
-}
-
-// Imprime o nome cadastrado do pino.
-void imprimirNomePino(const Chip &c, int pino) {
-  if (strlen(c.nomPinos[pino]) > 0) {
-    Serial.print(c.nomPinos[pino]);
-  } else {
-    Serial.print("sem_nome");
-  }
-}
-
-// Detalha um pino dentro de um teste especifico.
-void imprimirPinoTeste(const Chip &c, int testeIndice, int pino) {
-  byte valor = c.testes[testeIndice].valorEsperado[pino];
-
-  if (valor == 2) {
-    return;
-  }
-
-  byte tipo = tipoPino(c, pino);
-  int megaPin = mapeamento(c, pino);
-  int metade = c.qtdPinos / 2;
-
-  Serial.print("    Pino ");
-  Serial.print(pino);
-
-  Serial.print(" (");
-  imprimirNomePino(c, pino);
-  Serial.print(")");
-
-  Serial.print(" | Lado: ");
-  if (pino < metade) {
-    Serial.print("ESQ");
-  } else {
-    Serial.print("DIR");
-  }
-
-  Serial.print(" | Arduino: ");
-  if (megaPin == -1) {
-    Serial.print("SEM_MAPEAMENTO");
-  } else {
-    Serial.print("D");
-    Serial.print(megaPin);
-  }
-
-  Serial.print(" | Tipo: ");
-  imprimirTipo(tipo);
-
-  Serial.print(" | Acao: ");
-  if (tipo == 1) {
-    Serial.print("aplicar ");
-    imprimirValor(valor);
-  } else if (tipo == 0) {
-    Serial.print("esperar leitura ");
-    imprimirValor(valor);
-  } else {
-    Serial.print("ignorado pelo teste fisico");
-  }
-
-  Serial.println();
-}
-
-// Mostra quais pinos foram cadastrados como entrada ou saida.
-void imprimirDirecoesSalvas(const Chip &c) {
-  int metade = c.qtdPinos / 2;
-
-  Serial.println("  Direcoes salvas considerando pino:");
-
-  Serial.print("    ESQ: ");
-  for (int i = 0; i < metade; i++) {
-    Serial.print("pino ");
-    Serial.print(i);
-    Serial.print("=");
-    Serial.print(c.esquerda[i]);
-    if (i < metade - 1) Serial.print(", ");
-  }
-  Serial.println();
-
-  Serial.print("    DIR: ");
-  for (int i = 0; i < metade; i++) {
-    int pino = metade + i;
-    Serial.print("pino ");
-    Serial.print(pino);
-    Serial.print("=");
-    Serial.print(c.direita[i]);
-    if (i < metade - 1) Serial.print(", ");
-  }
-  Serial.println();
-}
-
-// Lista apenas o resumo dos chips salvos.
-// Nao mostra todas as baterias de testes para nao poluir a serial.
-void listarChipsETestes() {
-  int totalEeprom = 0;
-  EEPROM.get(END_TOTAL_CHIPS, totalEeprom);
-
-  Serial.println("================ CHIPS NA EEPROM ================");
-  Serial.print("Endereco totalChips: ");
-  Serial.println(END_TOTAL_CHIPS);
-  Serial.print("Endereco inicio chips: ");
-  Serial.println(END_INICIO_CHIPS);
-  Serial.print("sizeof(Chip): ");
-  Serial.println(sizeof(Chip));
-  Serial.print("MAX_CHIPS: ");
-  Serial.println(maxChips());
-
-  if (totalEeprom < 0 || totalEeprom > maxChips()) {
-    Serial.print("ERRO: totalChips invalido na EEPROM: ");
-    Serial.println(totalEeprom);
-    Serial.println("=================================================");
-    return;
-  }
-
-  Serial.print("Total de chips salvos: ");
-  Serial.println(totalEeprom);
-
-  if (totalEeprom == 0) {
-    Serial.println("Nenhum chip salvo.");
-    Serial.println("=================================================");
-    return;
-  }
-
-  for (int i = 0; i < totalEeprom; i++) {
-    Chip c;
-    EEPROM.get(enderecoChip(i), c);
-
-    Serial.println();
-    Serial.print("Chip #");
-    Serial.println(i + 1);
-
-    Serial.print("  Codigo: ");
-    Serial.println(c.codigo);
-
-    Serial.print("  Nome: ");
-    Serial.println(c.nome);
-
-    Serial.print("  Qtd pinos: ");
-    Serial.println(c.qtdPinos);
-
-    Serial.print("  Qtd testes cadastrados: ");
-    Serial.println(c.qtdTestes);
-
-    if (!(c.qtdPinos == 14 || c.qtdPinos == 16)) {
-      Serial.println("  ERRO: chip com qtdPinos invalida.");
-      continue;
-    }
-
-    if (c.qtdTestes < 0 || c.qtdTestes > MAX_TESTES) {
-      Serial.println("  ERRO: qtdTestes invalida.");
-      continue;
-    }
-
-    imprimirDirecoesSalvas(c);
-  }
-
-  Serial.println("=================================================");
-}
-
 // Retorna o pino de GND no padrao usado pelo projeto.
 // DIP-14: GND no pino 6.
 // DIP-16: GND no pino 7.
@@ -891,7 +713,6 @@ bool lerSerial(String linha) {
   Serial.println(" testes");
 
   salvarChip(c);
-  desenharChip(c);
   return true;
 }
 
@@ -958,8 +779,6 @@ void loop() {
       selecionarChip(n);
     } else if (linha.startsWith("Identificar")) {
       identificarChip();
-    } else if (linha.startsWith("Chips")) {
-      listarChipsETestes();
     } else if (linha.startsWith("Limpar")) {
       limparBanco();
     } else if (linha.length() > 0) {
