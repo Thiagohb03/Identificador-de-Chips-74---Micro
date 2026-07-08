@@ -422,7 +422,7 @@ bool executaTeste(const Chip &c, int pos) {
   bool testeOk = true;
 
   // Nesta versao, GND/VCC ja devem estar ligados antes do teste
-  // Aqui liberamos apenas sinais, sem desligar alimentacao
+  // Liberamos apenas sinais, sem desligar alimentacao
   liberarPinosDeSinal(c);
   delay(20);
 
@@ -447,8 +447,7 @@ bool executaTeste(const Chip &c, int pos) {
     }
   }
 
-  // Depois aplica os valores nas entradas de sinal do chip.
-  // GND e VCC nao passam por aqui; foram tratados antes.
+  // Aplica os valores nas entradas de sinal do chip
   if (testeOk) {
     for (int pino = 0; pino < c.qtdPinos; pino++) {
       if (ehPinoAlimentacao(c, pino)) {
@@ -469,7 +468,7 @@ bool executaTeste(const Chip &c, int pos) {
 
   delay(100);
 
-  // Por fim, confere as saidas esperadas.
+  // Confere as saidas esperadas
   if (testeOk) {
     for (int pino = 0; pino < c.qtdPinos; pino++) {
       if (ehPinoAlimentacao(c, pino)) {
@@ -492,14 +491,14 @@ bool executaTeste(const Chip &c, int pos) {
     }
   }
 
-  // Libera apenas sinais. Alimentacao continua ligada para o proximo teste.
+  // Libera apenas sinais. Alimentacao continua ligada para o proximo teste
   liberarPinosDeSinal(c);
   delay(20);
 
   return testeOk;
 }
 
-// Tenta identificar o chip comparando com todos os cadastrados.
+// Tenta identificar o chip comparando com todos os cadastrados
 void identificarChip() {
   Serial.println("INICIO_IDENTIFICAR");
 
