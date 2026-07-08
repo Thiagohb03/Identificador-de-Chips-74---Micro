@@ -613,75 +613,82 @@ String proximoCampo(const String &linha, int &atual) {
   return campo;
 }
 
-// Le a string CHIP enviada pela Serial e salva o cadastro.
+// Le a string CHIP enviada pela Serial e salva o cadastro
 bool lerSerial(String linha) {
+  //cria um chip e lipa todos os dados em sua memoria
   Chip c;
   inicializarChip(c);
 
   int atual = 0;
-
+  //verifica se a string recebida começa com CHIP:
   String cabecalho = proximoCampo(linha, atual);
   if (cabecalho != "CHIP") {
     Serial.println("ERRO: protocolo invalido.");
     return false;
   }
-
+  //proximoCampo le o proximo texto depois do ultimo : , no caso depois de CHIP:
   String codigo = proximoCampo(linha, atual);
+  //transforma a string recebida em um array de caracteres para salvar na struct
   codigo.toCharArray(c.codigo, sizeof(c.codigo));
 
+  //mesmo do anterior mas mpara o nome
   String nome = proximoCampo(linha, atual);
   nome.toCharArray(c.nome, sizeof(c.nome));
 
+  //mesmo do anterior mas dessa vez transforam o texto para int para salvar
   c.qtdPinos = proximoCampo(linha, atual).toInt();
 
+  //exibe uma mensagem de erro caso a string com a quantidade de pinos seja diferente de 14 ou 16
   if (c.qtdPinos != 14 && c.qtdPinos != 16) {
     Serial.println("ERRO: quantidade de pinos invalida.");
     return false;
   }
-
+  //define quantos pinos tem de cada lado
   int metade = c.qtdPinos / 2;
-
+  //salva cada nome de cada pino do array de nomes com max de 3 char
   for (int i = 0; i < c.qtdPinos; i++) {
     String nomePino = proximoCampo(linha, atual);
     nomePino.toCharArray(c.nomPinos[i], sizeof(c.nomPinos[i]));
   }
-
+  // lê o marcador dos pinos da direita
   String marcadorDir = proximoCampo(linha, atual);
   if (marcadorDir != "DIR") {
     Serial.println("ERRO: marcador DIR nao encontrado.");
     return false;
   }
-
+  //mesma conta do desenho dos pinos da direita de cima para baixo, ele remove um para o indice de pinos e depois remove o indice do for para ler de cima para baixo
   for (int i = 0; i < metade; i++) {
     int pino = c.qtdPinos - 1 - i;
+    //depois diminui a metade para saber qual seria o indice de 0 ate a metade para adicionar ao array
     int indiceDireita = pino - metade;
     c.direita[indiceDireita] = proximoCampo(linha, atual).toInt();
   }
-
+  // lê o marcador dos pinos da esquerda
   String marcadorEsq = proximoCampo(linha, atual);
   if (marcadorEsq != "ESQ") {
     Serial.println("ERRO: marcador ESQ nao encontrado.");
     return false;
   }
-
+  //le os pinos da esquerda e os salva como inteiros no array
   for (int i = 0; i < metade; i++) {
     c.esquerda[i] = proximoCampo(linha, atual).toInt();
   }
-
+  //le o marcador de testes
   String marcadorTestes = proximoCampo(linha, atual);
   if (marcadorTestes != "TESTES") {
     Serial.println("ERRO: marcador TESTES nao encontrado.");
     return false;
   }
-
+  //le a quantidade de testes  como inteiro e salva
   c.qtdTestes = proximoCampo(linha, atual).toInt();
-
+  //exibe erro caso tenha mais testes que o maximo permitido
   if (c.qtdTestes < 0 || c.qtdTestes > MAX_TESTES) {
     Serial.print("ERRO: quantidade de testes invalida. Maximo permitido: ");
     Serial.println(MAX_TESTES);
     return false;
   }
-
+  // salva o valor do teste esperado como 0, 1 ou 2
+  //le uma listas de 0 1 ou 2 e depois passa um for para verificar qual deles é e salvar
   for (int t = 0; t < c.qtdTestes; t++) {
     String temp = proximoCampo(linha, atual);
 
@@ -713,7 +720,8 @@ bool lerSerial(String linha) {
   return true;
 }
 
-// Apaga o banco de chips na EEPROM.
+// Apaga o banco de chips na eeprom
+//seta o total de chips para 0 transformando todos os chips salvos na eeprom em lixo e depois chama a função para liberar a lista
 void limparBanco() {
   totalChips = 0;
   EEPROM.put(END_TOTAL_CHIPS, totalChips);
@@ -721,12 +729,12 @@ void limparBanco() {
   Serial.println("EEPROM limpa.");
 }
 
-// Funcao chamada pela biblioteca quando o botao recebe um clique.
+// Funcao para o botao chamar quando o botao é apertado
 void aoApertar(GFButton &btn) {
   identificarChip();
 }
 
-// Configuracao inicial do Arduino, display, EEPROM e botao.
+// Configuracao inicial do Arduino, display, eeprom e botao
 void setup() {
   Serial.begin(9600);
   Serial.setTimeout(1000);
@@ -753,22 +761,19 @@ void setup() {
   tft.print("Insira o chip");
   tft.setCursor(20, 110);
   tft.print("e aperte o botao");
-
+  //chama a função de identificar ao apertar o botao
   botao.setClicksHandler(aoApertar);
-
-  Serial.print("Sistema iniciado. MAX_TESTES=");
-  Serial.print(MAX_TESTES);
-  Serial.print(" | MAX_CHIPS=");
-  Serial.println(maxChips());
 }
 
-// Loop principal: processa botao e comandos da Serial.
+// Loop principal
 void loop() {
   botao.process();
   if (Serial.available() > 0) {
+    //le uma string recebida ate o \n e salva
     String linha = Serial.readStringUntil('\n');
+    //remove espaços da string recebida
     linha.trim();
-
+    //se a string tiver o identificador CHIP: ele salva o chip
     if (linha.startsWith("CHIP:")) {
       lerSerial(linha);
     } else if (linha.startsWith("Selecionar:")) {
