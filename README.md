@@ -66,7 +66,12 @@ Executa um teste específico: aplica os valores de entrada nos pinos do chip via
 Desenha no display TFT o diagrama do chip com o nome, código e todos os pinos identificados com seus respectivos nomes e numeração.
 
 ### `lerSerial(String linha)`
+
 Interpreta a linha recebida pela serial no protocolo definido e popula a struct do chip para salvamento na EEPROM.
 
 ### `limparBanco()`
 Zera o contador de chips na EEPROM e limpa a lista da RAM, efetivamente apagando todos os chips cadastrados.
+
+###Esquemática circuito
+<img width="838" height="439" alt="Captura de tela 2026-07-08 001026" src="https://github.com/user-attachments/assets/34d21554-b903-4026-a893-de38e7497f11" />
+
