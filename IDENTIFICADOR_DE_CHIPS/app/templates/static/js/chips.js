@@ -19,35 +19,22 @@ function lerNomesPinos() {
     });
 }
 
-// ALTERNAR PINO
-// Chamada pelo onclick de cada botão gerado
+// ALTERNAR PINO — toggle simples entre E (entrada) e S (saída)
 function alternarPino(botao, numero) {
-    const tipo = botao.dataset.tipo;
-
-    if (tipo === "") {
-        // livre - entrada
+    if (botao.dataset.tipo === "S") {
         botao.dataset.tipo = "E";
         botao.textContent  = "E";
         botao.style.color  = "blue";
         pinosEntrada.push(numero);
         pinosEntrada.sort((a, b) => a - b);
         pinosSaida = pinosSaida.filter(p => p !== numero);
-
-    } else if (tipo === "E") {
-        // entrada - saída
+    } else {
         botao.dataset.tipo = "S";
         botao.textContent  = "S";
         botao.style.color  = "red";
         pinosSaida.push(numero);
         pinosSaida.sort((a, b) => a - b);
         pinosEntrada = pinosEntrada.filter(p => p !== numero);
-
-    } else {
-        // saída - livre
-        botao.dataset.tipo = "";
-        botao.textContent  = numero;
-        botao.style.color  = "black";
-        pinosSaida = pinosSaida.filter(p => p !== numero);
     }
 
     atualizarResumo();
@@ -90,9 +77,7 @@ async function salvarChip() {
         if (!resposta.ok) { alert("Erro ao salvar o chip."); return; }
 
         alert("Chip salvo com sucesso!");
-        document.getElementById("nome").value   = "";
-        document.getElementById("codigo").value = "";
-        carregarChips();
+        window.location = "/";
 
     } catch (erro) {
         alert("Erro de conexão com o servidor.");
@@ -156,6 +141,7 @@ async function excluirChip(code) {
     }
 }
 
+
 // ENVIAR CHIP PARA O ARDUINO
 async function enviarChip(code) {
     try {
@@ -168,19 +154,8 @@ async function enviarChip(code) {
     }
 }
 
-async function enviarTodosChips() {
-    try {
-        const resposta = await fetch("/chips/enviar-todos", { method: "POST" });
-        const dados = await resposta.json();
-        alert(dados.message);
-    } catch (erro) {
-        alert("Erro de conexão com o servidor.");
-        console.error(erro);
-    }
-}
 
-// DIAGRAMA DO CHIP  pra leitira
-
+// DIAGRAMA DO CHIP PARA LEITURA
 function renderizarPino(numero, pinVcc, pinGnd, chip) {
     if (numero === pinVcc) return `<button disabled>VCC</button>`;
     if (numero === pinGnd) return `<button disabled>GND</button>`;
@@ -202,7 +177,9 @@ function renderizarDiagramaChip(chip) {
         rows += `
             <tr>
                 <td>${renderizarPino(pinoEsq, pinVcc, pinGnd, chip)}</td>
+                <td class="num-pino esq">${pinoEsq}</td>
                 <td class="corpo-chip">${i === 0 ? "74xx" : ""}</td>
+                <td class="num-pino dir">${pinoDir}</td>
                 <td>${renderizarPino(pinoDir, pinVcc, pinGnd, chip)}</td>
             </tr>`;
     }
@@ -210,7 +187,8 @@ function renderizarDiagramaChip(chip) {
     return `<table class="tabela-chip">${rows}</table>`;
 }
 
-// agora usando a nova forma de render dos chips (usando aquele estilo como combinado)
+
+// CARREGAR LISTA DE CHIPS
 async function carregarChips() {
     const div = document.getElementById("lista-chips");
 
@@ -227,6 +205,7 @@ async function carregarChips() {
             const nomes = chip.pin_names && Object.keys(chip.pin_names).length > 0
                 ? `<br>Nomes: ${Object.entries(chip.pin_names).map(([p, n]) => `${p}: ${n}`).join(", ")}`
                 : "";
+
             return `
             <div class="cartao">
                 <b>${chip.name}</b> - Código ${chip.code} - ${chip.pin_count} pinos<br>
