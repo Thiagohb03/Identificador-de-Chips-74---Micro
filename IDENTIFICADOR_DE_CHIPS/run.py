@@ -22,7 +22,7 @@ app = Flask(
 arduino_serial = None
 
 
-def enviar_texto_arduino(texto):
+def enviar_texto_arduino(texto): 
     global arduino_serial
 
     from serial import Serial
@@ -35,11 +35,6 @@ def enviar_texto_arduino(texto):
         # Espera o Arduino reiniciar e terminar o setup
         time.sleep(4.0)
 
-        arduino_serial.reset_input_buffer()
-        arduino_serial.reset_output_buffer()
-
-    # Limpa respostas antigas
-    arduino_serial.reset_input_buffer()
 
     # Envia a string completa para o Arduino
     arduino_serial.write(texto.encode("UTF-8"))
