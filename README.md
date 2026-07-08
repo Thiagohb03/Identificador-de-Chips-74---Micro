@@ -35,6 +35,7 @@ A arquitetura do projeto é dividida em duas partes principais:
 ## Arquitetura Geral
 
 ```mermaid
+flowchart LR
     A[Usuário] --> B[Interface Web]
     B --> C[Servidor Flask]
     C --> D[Arquivo JSON]
