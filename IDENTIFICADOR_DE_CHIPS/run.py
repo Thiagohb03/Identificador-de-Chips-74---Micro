@@ -1,7 +1,7 @@
 # Importa o Flask e as funções que vamos usar
 from flask import Flask, render_template, request, jsonify
 
-# Importa a classe Chip (define o que é um chip) e as funções de armazenamento
+# Importa a classe Chip e as funções de armazenamento
 from app.models import Chip, TestCase
 from app.storage import (
     load_chips, add_chip, get_chip_by_code, update_chip, delete_chip,
@@ -10,147 +10,205 @@ from app.storage import (
 
 
 # Cria o servidor Flask, apontando onde ficam os templates e arquivos estáticos
-app = Flask(__name__,
-            template_folder="app/templates",
-            static_folder="app/templates/static")
+app = Flask(
+    __name__,
+    template_folder="app/templates",
+    static_folder="app/templates/static"
+)
 
 
-# Rota principal: abre a página inicial
-# Lê o parâmetro ?qtd_pinos= da URL para saber quantos pinos desenhar
+# Serial global para manter a COM5 aberta
+# Assim o Arduino não reseta toda vez que um chip é enviado
+arduino_serial = None
+
+
+def enviar_texto_arduino(texto):
+    global arduino_serial
+
+    from serial import Serial
+    import time
+
+    # Abre a serial só uma vez
+    if arduino_serial is None or not arduino_serial.is_open:
+        arduino_serial = Serial("COM5", baudrate=9600, timeout=0.5)
+
+        # Espera o Arduino reiniciar e terminar o setup
+        time.sleep(4.0)
+
+        arduino_serial.reset_input_buffer()
+        arduino_serial.reset_output_buffer()
+
+    # Limpa respostas antigas
+    arduino_serial.reset_input_buffer()
+
+    # Envia a string completa para o Arduino
+    arduino_serial.write(texto.encode("UTF-8"))
+    arduino_serial.flush()
+
+    # Espera resposta do Arduino
+    inicio = time.time()
+
+    while time.time() - inicio < 8:
+        linha = arduino_serial.readline().decode("UTF-8", errors="ignore").strip()
+
+        if "SALVO" in linha:
+            return True, "Chip enviado e salvo no Arduino."
+
+        if "ERRO" in linha:
+            return False, linha
+
+    return False, "Arduino não confirmou o recebimento."
+
+
+# Rota principal
 @app.route("/")
 def index():
+    return render_template("index.html")
+
+
+# Página de cadastro
+@app.route("/cadastrar")
+def cadastrar():
     qtd_pinos = int(request.args.get("qtd_pinos", 14))
+
     if qtd_pinos not in (14, 16):
         qtd_pinos = 14
-    return render_template("index.html", qtd_pinos=qtd_pinos)
+
+    return render_template("cadastrar.html", qtd_pinos=qtd_pinos)
 
 
-# Retorna a lista de todos os chips salvos (em formato JSON)
+# Lista todos os chips
 @app.route("/chips", methods=["GET"])
 def listar_chips():
     chips = load_chips()
     return jsonify([chip.to_dict() for chip in chips])
 
 
-# Recebe um novo chip (em formato JSON) e salva no arquivo
+# Cria novo chip
 @app.route("/chips", methods=["POST"])
 def criar_chip():
     data = request.get_json()
     chip = Chip.from_dict(data)
     add_chip(chip)
+
     return jsonify({"message": "Chip criado com sucesso"}), 201
 
 
-# Retorna um chip específico pelo código (ex: /chips/74283)
+# Busca chip pelo código
 @app.route("/chips/<int:code>", methods=["GET"])
 def buscar_chip(code):
     chip = get_chip_by_code(code)
+
     if not chip:
         return jsonify({"message": "Chip não encontrado"}), 404
+
     return jsonify(chip.to_dict())
 
 
-# Atualiza os dados de um chip existente
+# Atualiza chip existente
 @app.route("/chips/<int:code>", methods=["PUT"])
 def atualizar_chip(code):
     data = request.get_json()
     chip = Chip.from_dict(data)
     update_chip(code, chip)
+
     return jsonify({"message": "Chip atualizado com sucesso"})
 
 
-# Página de edição de um chip
+# Página de edição
 @app.route("/editar/<int:code>")
 def editar_chip(code):
     chip = get_chip_by_code(code)
+
     if not chip:
         return "Chip não encontrado", 404
+
     qtd_pinos = int(request.args.get("qtd_pinos", chip.pin_count))
     chip_tests = [test.to_dict() for test in chip.tests]
-    return render_template("editar.html", chip=chip, qtd_pinos=qtd_pinos, chip_tests=chip_tests)
+
+    return render_template(
+        "editar.html",
+        chip=chip,
+        qtd_pinos=qtd_pinos,
+        chip_tests=chip_tests
+    )
 
 
-# Página de testes de um chip
+# Página de testes
 @app.route("/testes/<int:code>")
 def testes_chip(code):
     chip = get_chip_by_code(code)
+
     if not chip:
         return "Chip não encontrado", 404
+
     chip_tests = [test.to_dict() for test in chip.tests]
-    return render_template("testes.html", chip=chip, chip_tests=chip_tests)
+
+    return render_template(
+        "testes.html",
+        chip=chip,
+        chip_tests=chip_tests
+    )
 
 
-# Deleta um chip pelo código
+# Deleta chip
 @app.route("/chips/<int:code>", methods=["DELETE"])
 def deletar_chip(code):
     delete_chip(code)
+
     return jsonify({"message": "Chip deletado com sucesso"})
 
 
-# Adiciona um novo teste a um chip
+# Cria novo teste para um chip
 @app.route("/chips/<int:code>/tests", methods=["POST"])
 def criar_teste(code):
     data = request.get_json()
     test = TestCase.from_dict(data)
     add_test(code, test)
+
     return jsonify({"message": "Teste criado com sucesso"}), 201
 
 
-# Atualiza um teste existente (pela posição na lista de testes do chip)
+# Atualiza um teste existente
 @app.route("/chips/<int:code>/tests/<int:index>", methods=["PUT"])
 def atualizar_teste(code, index):
     data = request.get_json()
     test = TestCase.from_dict(data)
     update_test(code, index, test)
+
     return jsonify({"message": "Teste atualizado com sucesso"})
 
 
-# Remove um teste (pela posição na lista de testes do chip)
+# Remove um teste
 @app.route("/chips/<int:code>/tests/<int:index>", methods=["DELETE"])
 def deletar_teste(code, index):
     delete_test(code, index)
+
     return jsonify({"message": "Teste deletado com sucesso"})
 
 
-
-
-# Envia todos os chips salvos para a serial do Arduino
-@app.route("/chips/enviar-todos", methods=["POST"])
-def enviar_todos_serial():
-    chips = load_chips()
-    if not chips:
-        return jsonify({"message": "Nenhum chip cadastrado"}), 404
-
-    try:
-        from serial import Serial
-        meu_serial = Serial("/dev/serial0", baudrate=9600)
-        for chip in chips:
-            texto = chip.to_arduino_protocol() + "\n"
-            meu_serial.write(texto.encode("UTF-8"))
-        meu_serial.close()
-        return jsonify({"message": f"{len(chips)} chip(s) enviado(s) com sucesso"})
-    except Exception as e:
-        return jsonify({"message": f"Erro ao enviar: {str(e)}"}), 500
-
-
-# Envia o protocolo do chip para a serial do Arduino
+# Envia um chip individual para o Arduino
 @app.route("/chips/<int:code>/enviar-serial", methods=["POST"])
 def enviar_serial(code):
     chip = get_chip_by_code(code)
+
     if not chip:
         return jsonify({"message": "Chip não encontrado"}), 404
 
     try:
-        from serial import Serial
-        meu_serial = Serial("/dev/serial0", baudrate=9600)
         texto = chip.to_arduino_protocol() + "\n"
-        meu_serial.write(texto.encode("UTF-8"))
-        meu_serial.close()
-        return jsonify({"message": "Enviado para o Arduino com sucesso"})
+        ok, mensagem = enviar_texto_arduino(texto)
+
+        if ok:
+            return jsonify({"message": mensagem})
+
+        return jsonify({"message": mensagem}), 500
+
     except Exception as e:
         return jsonify({"message": f"Erro ao enviar: {str(e)}"}), 500
 
 
-# Inicia o servidor quando o arquivo é executado diretamente
+# Inicia o servidor
 if __name__ == "__main__":
-    app.run(debug=True)
+    # use_reloader=False evita o Flask abrir dois processos e disputar a COM5
+    app.run(debug=True, use_reloader=False)
