@@ -72,6 +72,6 @@ Interpreta a linha recebida pela serial no protocolo definido e popula a struct 
 ### `limparBanco()`
 Zera o contador de chips na EEPROM e limpa a lista da RAM, efetivamente apagando todos os chips cadastrados.
 
-### `Esquemática circuito`
+### Esquemática circuito
 <img width="838" height="439" alt="Captura de tela 2026-07-08 001026" src="https://github.com/user-attachments/assets/34d21554-b903-4026-a893-de38e7497f11" />
 
