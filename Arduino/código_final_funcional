@@ -1,12 +1,12 @@
-#include <Adafruit_GFX.h>
-#include <MCUFRIEND_kbv.h>
+#include <Adafruit_GFX.h> 
+#include <MCUFRIEND_kbv.h> 
 #include <EEPROM.h>
 #include <string.h>
 #include <GFButton.h>
 
 GFButton botao(24);
 
-MCUFRIEND_kbv tft;
+MCUFRIEND_kbv tft; //inicialização da tela
 
 #define BRANCO 0xFFFF
 #define PRETO 0x0000
@@ -16,12 +16,12 @@ MCUFRIEND_kbv tft;
 const int END_TOTAL_CHIPS = 0;  // onde fica salvo o total de chips
 const int END_INICIO_CHIPS = sizeof(int);  // onde comecam os dados dos chips
 
-// Guarda os valores esperados em uma bateria de teste.
+// Guarda os valores esperados em uma bateria de teste
 struct Teste {
   byte valorEsperado[16];
 };
 
-// Guarda todos os dados de um chip cadastrado.
+// Guarda todos os dados de um chip cadastrado
 struct Chip {
   char nome[21];
   char codigo[8];
@@ -33,27 +33,30 @@ struct Chip {
   Teste testes[MAX_TESTES];
 };
 
+// total de chips salvos na eeprom
 int totalChips = 0;
 
-// No da lista encadeada usada em RAM.
+// No da lista encadeada
 struct No {
   Chip chip;
   No *proximo;
 };
 
+//inicializaçao da lista encadeada vazia
 No *listaChips = nullptr;
 
-// Calcula quantos chips cabem na EEPROM.
+// Calcula quantos chips cabem na EEPROM. (tam da eeprom - 1° endereço)/ tamanho de um chip
 int maxChips() {
   return (EEPROM.length() - END_INICIO_CHIPS) / sizeof(Chip);
 }
 
-// Calcula o endereco de um chip dentro da EEPROM.
+// Calcula o endereco de um chip dentro da EEPROM. endereço do inicio dos chips + indice * tamanho de um chip
 int enderecoChip(int indice) {
   return END_INICIO_CHIPS + indice * sizeof(Chip);
 }
 
-// Limpa a lista em RAM antes de recarregar os chips.
+// Limpa a lista em RAM antes de recarregar os chips
+//o no atual aponta pro inicio da lista, o no proximo aponta para o proximo no de acordo com o atual. o atual libera a memoria e depois aponta para o mesmo do proximo, continuando o loop ate o atual apontar para null
 void limparLista() {
   No *atual = listaChips;
   while (atual != nullptr) {
@@ -64,18 +67,12 @@ void limparLista() {
   listaChips = nullptr;
 }
 
-// Zera o chip e deixa todos os testes como ignorados.
+// Zera o chip e deixa todos os testes como ignorados
+//
+//memset recebe um endereço, um valor e um tamanho e seta todos os valores do inicio do endereço ate o finbal do tamanho como o valor passado
 void inicializarChip(Chip &c) {
   memset(&c, 0, sizeof(Chip));
-
-  c.qtdPinos = 0;
-  c.qtdTestes = 0;
-
-  for (int i = 0; i < 8; i++) {
-    c.direita[i] = 2;
-    c.esquerda[i] = 2;
-  }
-
+//para nao receber lixo no chip, ele seta todos valores de testes para 2 pois é o valor ignorado pelo sistema
   for (int t = 0; t < MAX_TESTES; t++) {
     for (int i = 0; i < 16; i++) {
       c.testes[t].valorEsperado[i] = 2;
@@ -83,7 +80,9 @@ void inicializarChip(Chip &c) {
   }
 }
 
-// Adiciona um chip na lista encadeada em RAM.
+// Adiciona um chip na lista encadeada.
+//faz um check para garantir que he espeço em memoria para novos chips
+//um novo no é criado e recebe o chip recebido pela função e nulo no ponteiro.
 void adicionarLista(Chip c) {
   No *novo = new No();
   if (novo == nullptr) {
@@ -93,12 +92,13 @@ void adicionarLista(Chip c) {
 
   novo->chip = c;
   novo->proximo = nullptr;
-
+  
+//se a lista for vazia, adiciona o no novo no 1° endereço
   if (listaChips == nullptr) {
     listaChips = novo;
     return;
   }
-
+//se a lista nao for vazia ele percorre a lista todo ate achar um ponteiro para nulo e entao aponta para o novo no
   No *atual = listaChips;
   while (atual->proximo != nullptr) {
     atual = atual->proximo;
@@ -106,17 +106,19 @@ void adicionarLista(Chip c) {
   atual->proximo = novo;
 }
 
-// Carrega da EEPROM para a lista em RAM.
+// Carrega da EEPROM para a lista
 void carregaChip() {
+  //garante que a lista esta vazia antes de adicionar qualquer coisa
   limparLista();
-
+//pega da eeprom o total de chips e salva na variavel global
   EEPROM.get(END_TOTAL_CHIPS, totalChips);
-
+//garante que o total de chips é pelo menos 0 e nenor que o tamanho total de chips que a eeprom aguenta para evitar lixo e erros
   if (totalChips < 0 || totalChips > maxChips()) {
     totalChips = 0;
     EEPROM.put(END_TOTAL_CHIPS, totalChips);
   }
-
+// faz um loop do tamanho total de chips na eeprom, cria um tipo chip novo e poe as informações do chip da eeprom no indice i no tipo chip
+//verifica que o chip tem a quantidade de testes e de pinos esperado pelo sistema para evitar erros nas demais funções e depois adiciona à lista
   for (int i = 0; i < totalChips; i++) {
     Chip c;
     EEPROM.get(enderecoChip(i), c);
@@ -130,31 +132,34 @@ void carregaChip() {
 }
 
 // Salva um chip novo no fim da EEPROM.
+//garante que a eeprom possiu espaço suficiente para adicionar um novo chip, caso contrario mostra uma mensagem de erro
 void salvarChip(Chip c) {
   if (totalChips >= maxChips()) {
     Serial.println("ERRO: Banco cheio");
     return;
   }
-
+//calcula exatamente qual endereço deve ser usado para o proximo chip na eeprom
   int endereco = enderecoChip(totalChips);
-
+// coloca o tipo chip na eeprom
   EEPROM.put(endereco, c);
+//incrementa o valor total de chips e o salva no endereço do total de chips
   totalChips++;
   EEPROM.put(END_TOTAL_CHIPS, totalChips);
 
   Serial.print("SALVO. Total chips: ");
   Serial.println(totalChips);
-
+// adiciona o chip recebido no fim da lista encadeada com a função 
   adicionarLista(c);
 }
 
-// Mostra os dados basicos de um chip salvo pelo indice.
+// Mostra os dados basicos de um chip salvo pelo indice
+//se o indice passado esta fora do range do total de chips ele exibe uma mensagem de erro
 void selecionarChip(int n) {
   if (n < 1 || n > totalChips) {
     Serial.println("ERRO: indice de chip invalido.");
     return;
   }
-
+//cria um tipo chip e carrega os dados do endereço no novo chip criado(endereçoChip recebe n-1 pois ele recebe um indice que começa em 0 e n é a posição passada para a função)
   Chip c;
   EEPROM.get(enderecoChip(n - 1), c);
 
@@ -175,66 +180,58 @@ void selecionarChip(int n) {
 
 // Desenha o chip identificado no display.
 void desenharChip(Chip c) {
+  //limpa a tela pintando ela toda de preto
   tft.fillScreen(PRETO);
+  //escreve o nome e o codigo do chip no canto da tela
   tft.setTextColor(BRANCO);
-
   tft.setTextSize(2);
   tft.setCursor(5, 5);
   tft.print(c.nome);
-
   tft.setTextSize(1);
   tft.setCursor(5, 25);
   tft.print(c.codigo);
-
+  //define a metade dos pinos para saber quantos pinos terao na esquerda e na direita
   int metade = c.qtdPinos / 2;
+  //x e y iniciais do retangulo
   int xRet = 90;
   int yRet = 40;
+  //define uma altura e largura para o retangulo
   int larguraRet = 60;
   int alturaRet = metade * 20;
 
   tft.drawRect(xRet, yRet, larguraRet, alturaRet, BRANCO);
-
+  // para cada pino do lado esquerdo ele define o y do pino como o y do retangulo + (indice do pino * o espaço entre cada um)+ um pequeno valor para ele nao ficar alinhado com o retangulo maior
   for (int i = 0; i < metade; i++) {
     int yPino = yRet + i * 20 + 4;
+    // anda 14 espaços para a esquerda para iniciar o desenho do pino quadrado em relaçãoi ao retangulo
     tft.drawRect(xRet - 14, yPino, 14, 14, BRANCO);
     tft.setTextSize(1);
+    //esxcreve o numero do pino dentro do quadrado do pino
     tft.setCursor(xRet - 11, yPino + 3);
     tft.print(i);
-
+    //escreve o nome do pino do lado de fora dele
     String nomePino = String(c.nomPinos[i]);
     tft.setCursor(xRet - 14 - (nomePino.length() * 6) - 2, yPino + 3);
     tft.print(nomePino.substring(0, 5));
   }
 
   for (int i = 0; i < metade; i++) {
+    //como ele desenha de cima para baixo, precisa desenhar o ultimo pino 1°, como o numero vai de 0 a 14 ou 16 ele diminui 1 do numero de pinos e depois diminui o indice pois o primeiro vai ser o de cima
     int pinoIdx = c.qtdPinos - 1 - i;
     int yPino = yRet + i * 20 + 4;
+    // anda a largura total do retangulo maior + 14 espaços para a direita para iniciar o desenho do pino quadrado em relação ao retangulo
     tft.drawRect(xRet + larguraRet, yPino, 14, 14, BRANCO);
+    //escreve o numero do pino dentro do quadrado do pino
     tft.setTextSize(1);
     tft.setCursor(xRet + larguraRet + 2, yPino + 3);
     tft.print(pinoIdx);
-
+    //escreve o nome do pino do lado de fora dele
     String nomePino = String(c.nomPinos[pinoIdx]);
     tft.setCursor(xRet + larguraRet + 16, yPino + 3);
     tft.print(nomePino.substring(0, 5));
   }
 }
 
-// Mapeamento dos pinos do CI para os pinos digitais do Arduino.
-// O indice representa o pino do CI no sistema, começando em 0.
-// Exemplo: pino 0 = pino fisico 1 do CI.
-//
-// DIP-14:
-// lado esquerdo: pinos 0 a 6
-// lado direito:  pinos 7 a 13
-//
-// DIP-16:
-// lado esquerdo: pinos 0 a 7
-// lado direito:  pinos 8 a 15
-//
-// No DIP-16, os pinos extras entram no meio:
-// pino 7 -> ultimo pino do lado esquerdo
-// pino 8 -> primeiro pino do lado direito
 const int pinoMega14[14] = {
   53,  // pino 0
   51,  // pino 1
@@ -242,14 +239,14 @@ const int pinoMega14[14] = {
   45,  // pino 3
   52,  // pino 4
   50,  // pino 5
-  48,  // pino 6 = GND no DIP-14
+  48,  // pino 6 = GND no 14
   43,  // pino 7
   41,  // pino 8
   39,  // pino 9
   37,  // pino 10
   35,  // pino 11
   33,  // pino 12
-  31   // pino 13 = VCC no DIP-14
+  31   // pino 13 = VCC no 14
 };
 
 const int pinoMega16[16] = {
@@ -260,7 +257,7 @@ const int pinoMega16[16] = {
   52,  // pino 4
   50,  // pino 5
   48,  // pino 6
-  46,  // pino 7 = GND no DIP-16
+  46,  // pino 7 = GND no 16
 
   26,  // pino 8
   43,  // pino 9
@@ -269,11 +266,11 @@ const int pinoMega16[16] = {
   37,  // pino 12
   35,  // pino 13
   33,  // pino 14
-  31   // pino 15 = VCC no DIP-16
+  31   // pino 15 = VCC no 16
 };
 
-// Retorna o pino digital do Arduino correspondente ao pino do CI.
-// Usa um mapa para DIP-14 e outro para DIP-16.
+// Retorna o pino digital do Arduino correspondente ao pino do CI
+// Usa um mapa para 14 pin e outro para 16 pin
 int mapeamento(const Chip &c, int indicePino) {
   if (indicePino < 0 || indicePino >= c.qtdPinos) {
     return -1;
@@ -290,7 +287,7 @@ int mapeamento(const Chip &c, int indicePino) {
   return -1;
 }
 
-// Retorna o tipo do pino: 1 entrada, 0 saida, 2 ignorado.
+// Retorna o tipo do pino: 1 entrada, 0 saida, 2 ignorado
 byte tipoPino(const Chip &c, int pino) {
   int metade = c.qtdPinos / 2;
 
@@ -305,30 +302,30 @@ byte tipoPino(const Chip &c, int pino) {
   return c.direita[pino - metade];
 }
 
-// Retorna o pino de GND no padrao usado pelo projeto.
-// DIP-14: GND no pino 6.
-// DIP-16: GND no pino 7.
+// Retorna o pino de GND no padrao usado pelo projeto
+// 14: GND no pino 6.
+// 16: GND no pino 7.
 int pinoGND(const Chip &c) {
   if (c.qtdPinos == 14) return 6;
   if (c.qtdPinos == 16) return 7;
   return -1;
 }
 
-// Retorna o pino de VCC no padrao usado pelo projeto.
-// DIP-14: VCC no pino 13.
-// DIP-16: VCC no pino 15.
+// Retorna o pino de VCC no padrao usado pelo projeto
+// 14: VCC no pino 13
+// 16: VCC no pino 15
 int pinoVCC(const Chip &c) {
   if (c.qtdPinos == 14) return 13;
   if (c.qtdPinos == 16) return 15;
   return -1;
 }
 
-// Verifica se o pino e GND ou VCC.
+// Verifica se o pino e GND ou VCC
 bool ehPinoAlimentacao(const Chip &c, int pino) {
   return pino == pinoGND(c) || pino == pinoVCC(c);
 }
 
-// Desliga todos os pinos do chip e coloca como entrada.
+// Desliga todos os pinos do chip e coloca como entrada
 void desligarTodosPinosDoChip(const Chip &c) {
   for (int pino = 0; pino < c.qtdPinos; pino++) {
     int megaPin = mapeamento(c, pino);
@@ -339,7 +336,7 @@ void desligarTodosPinosDoChip(const Chip &c) {
   }
 }
 
-// Coloca um pino do Arduino em alta impedancia.
+// Coloca um pino do Arduino em alta impedancia
 void liberarPinoArduino(int megaPin) {
   if (megaPin != -1) {
     digitalWrite(megaPin, LOW);
@@ -347,7 +344,7 @@ void liberarPinoArduino(int megaPin) {
   }
 }
 
-// Libera todos os pinos usados nos mapas DIP-14 e DIP-16.
+// Libera todos os pinos usados nos mapas 14 e 16
 void liberarTodosPinosMapeados() {
   for (int i = 0; i < 14; i++) {
     liberarPinoArduino(pinoMega14[i]);
@@ -358,7 +355,7 @@ void liberarTodosPinosMapeados() {
   }
 }
 
-// Libera apenas os pinos de sinal, mantendo GND e VCC fora.
+// Libera apenas os pinos de sinal, mantendo GND e VCC fora
 void liberarPinosDeSinal(const Chip &c) {
   for (int pino = 0; pino < c.qtdPinos; pino++) {
     if (ehPinoAlimentacao(c, pino)) {
@@ -373,7 +370,7 @@ void liberarPinosDeSinal(const Chip &c) {
   }
 }
 
-// Liga GND em LOW e VCC em HIGH antes dos testes.
+// Liga GND em LOW e VCC em HIGH antes dos testes
 bool aplicarAlimentacao(const Chip &c) {
   int gnd = pinoGND(c);
   int vcc = pinoVCC(c);
@@ -386,7 +383,7 @@ bool aplicarAlimentacao(const Chip &c) {
     return false;
   }
 
-  // Alimentacao sempre vem antes dos sinais.
+  // Alimentacao sempre vem antes dos sinais
   pinMode(megaGND, OUTPUT);
   digitalWrite(megaGND, LOW);
 
@@ -397,7 +394,7 @@ bool aplicarAlimentacao(const Chip &c) {
   return true;
 }
 
-// Desliga GND e VCC depois do teste.
+// Desliga GND e VCC depois do teste
 void desligarAlimentacao(const Chip &c) {
   int gnd = pinoGND(c);
   int vcc = pinoVCC(c);
@@ -416,7 +413,7 @@ void desligarAlimentacao(const Chip &c) {
   }
 }
 
-// Executa uma bateria de teste de um chip.
+// Executa uma bateria de teste de um chip
 bool executaTeste(const Chip &c, int pos) {
   if (pos < 0 || pos >= c.qtdTestes || pos >= MAX_TESTES) {
     return false;
@@ -424,17 +421,17 @@ bool executaTeste(const Chip &c, int pos) {
 
   bool testeOk = true;
 
-  // Nesta versao, GND/VCC ja devem estar ligados antes do teste.
-  // Aqui liberamos apenas sinais, sem desligar alimentacao.
+  // Nesta versao, GND/VCC ja devem estar ligados antes do teste
+  // Aqui liberamos apenas sinais, sem desligar alimentacao
   liberarPinosDeSinal(c);
   delay(20);
 
-  // Garante alimentacao antes de qualquer entrada/sinal.
+  // Garante alimentacao antes de qualquer entrada/sinal
   if (!aplicarAlimentacao(c)) {
     return false;
   }
 
-  // Primeiro configura as saidas do chip como entradas no Arduino.
+  // Primeiro configura as saidas do chip como entradas no Arduino
   for (int pino = 0; pino < c.qtdPinos; pino++) {
     if (ehPinoAlimentacao(c, pino)) {
       continue;
