@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Editar Chip {{ chip.code }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<h1>Editar Chip</h1>
+
+<div class="caixa">
+    <a href="/" class="btn-nav">Voltar</a>
+    <br><br>
+
+    <label>Nome:</label>
+    <input type="text" id="nome" value="{{ chip.name }}">
+    <br><br>
+
+    <label>Código:</label>
+    <input type="number" id="codigo" value="{{ chip.code }}">
+    <br><br>
+
+    <label>Quantidade de pinos:</label>
+    <select id="qtd-pinos" onchange="window.location = '/editar/{{ chip.code }}?qtd_pinos=' + this.value">
+        <option value="14" {% if qtd_pinos == 14 %}selected{% endif %}>14 pinos</option>
+        <option value="16" {% if qtd_pinos == 16 %}selected{% endif %}>16 pinos</option>
+    </select>
+    <br><br>
+
+    <p>Clique num pino para alternar entre <b>E</b> (entrada) e <b>S</b> (saída)</p>
+
+    {% set pin_vcc = qtd_pinos - 1 %}
+    {% set pin_gnd = 6 if qtd_pinos == 14 else 7 %}
+    {% set pinos_e = chip.input_pins  if qtd_pinos == chip.pin_count else [] %}
+    {% set pinos_s = chip.output_pins if qtd_pinos == chip.pin_count else [] %}
+
+    <table id="tabela-chip" class="tabela-chip">
+        {% for i in range(qtd_pinos // 2) %}
+
+            {% set pino_esq = i %}
+            {% set pino_dir = qtd_pinos - 1 - i %}
+
+            <tr>
+                <!-- Botão esquerdo -->
+                <td>
+                    {% if pino_esq == pin_vcc %}
+                        <button disabled>VCC</button>
+                    {% elif pino_esq == pin_gnd %}
+                        <button disabled>GND</button>
+                    {% elif pino_esq in pinos_e %}
+                        <button data-tipo="E" style="color:blue" onclick="alternarPino(this, {{ pino_esq }})">E</button>
+                    {% elif pino_esq in pinos_s %}
+                        <button data-tipo="S" style="color:red" onclick="alternarPino(this, {{ pino_esq }})">S</button>
+                    {% else %}
+                        <button data-tipo="E" style="color:blue" onclick="alternarPino(this, {{ pino_esq }})">E</button>
+                    {% endif %}
+                </td>
+
+                <!-- Número do pino esquerdo (dentro do chip) -->
+                <td class="num-pino esq">{{ pino_esq }}</td>
+
+                <td class="corpo-chip">{% if i == 0 %}74xx{% endif %}</td>
+
+                <!-- Número do pino direito (dentro do chip) -->
+                <td class="num-pino dir">{{ pino_dir }}</td>
+
+                <!-- Botão direito -->
+                <td>
+                    {% if pino_dir == pin_vcc %}
+                        <button disabled>VCC</button>
+                    {% elif pino_dir == pin_gnd %}
+                        <button disabled>GND</button>
+                    {% elif pino_dir in pinos_e %}
+                        <button data-tipo="E" style="color:blue" onclick="alternarPino(this, {{ pino_dir }})">E</button>
+                    {% elif pino_dir in pinos_s %}
+                        <button data-tipo="S" style="color:red" onclick="alternarPino(this, {{ pino_dir }})">S</button>
+                    {% else %}
+                        <button data-tipo="E" style="color:blue" onclick="alternarPino(this, {{ pino_dir }})">E</button>
+                    {% endif %}
+                </td>
+            </tr>
+
+        {% endfor %}
+    </table>
+
+    <br>
+    <p>Entradas: <span id="lista-entradas">[]</span></p>
+    <p>Saídas: <span id="lista-saidas">[]</span></p>
+
+    <p>Nomes dos pinos (opcional):</p>
+    {% for i in range(qtd_pinos) %}
+        {% if i != pin_vcc and i != pin_gnd %}
+            <label>{{ i }}:</label>
+            <input type="text" id="nome-pino-{{ i }}" placeholder="nome" style="width:70px; margin-right:8px"
+                   value="{{ chip.pin_names.get(i|string, '') }}">
+        {% endif %}
+    {% endfor %}
+    <br><br>
+
+    <button onclick="salvarEdicao()">Salvar alterações</button>
+</div>
+
+<script src="{{ url_for('static', filename='js/chips.js') }}"></script>
+<script>
+    codigoChipOriginal = {{ chip.code }};
+    testesOriginais    = {{ chip_tests | tojson }};
+    nomesDosPinos      = {{ chip.pin_names | tojson }};
+    pinosEntrada = {{ pinos_e }};
+    pinosSaida   = {{ pinos_s }};
+
+    // Pinos sem classificação (ex: mudança de qtd_pinos) entram como E por padrão
+    const pinVcc = {{ qtd_pinos }} - 1;
+    const pinGnd = {{ qtd_pinos }} === 14 ? 6 : 7;
+    for (let i = 0; i < {{ qtd_pinos }}; i++) {
+        if (i !== pinVcc && i !== pinGnd && !pinosEntrada.includes(i) && !pinosSaida.includes(i)) {
+            pinosEntrada.push(i); 
+        }
+    }
+    atualizarResumo();
+</script>
+</body>
+</html>

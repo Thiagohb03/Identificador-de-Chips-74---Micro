@@ -1,0 +1,142 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 0 16px;
+}
+
+h1 {
+    background: #333;
+    color: white;
+    padding: 16px;
+    margin: 0 0 16px 0;
+}
+
+.caixa {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.caixa h2 {
+    margin-top: 0;
+}
+
+input, select {
+    padding: 6px;
+    font-size: 14px;
+}
+
+button {
+    padding: 8px 16px;
+    margin: 2px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+button:hover    { background: #1d4ed8; }
+button:disabled { background: #999; cursor: default; }
+
+.btn-excluir       { background: #dc2626; }
+.btn-excluir:hover { background: #b91c1c; }
+
+.btn-nav {
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 2px;
+    background: white;
+    color: #2563eb;
+    border: 1px solid #2563eb;
+    border-radius: 4px;
+    font-size: 14px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-nav:hover {
+    background: #2563eb;
+    color: white;
+}
+
+
+/* TABELA DO CHIP*/
+
+.tabela-chip {
+    border-collapse: collapse;
+    margin-top: 12px;
+}
+
+/* Botões dos pinos: fundo branco, borda preta, sem arredondamento */
+.tabela-chip button {
+    width: 50px;
+    padding: 6px 0;
+    font-size: 13px;
+    background: white;
+    color: black;
+    border: 1px solid black;
+    border-radius: 0;
+}
+
+.tabela-chip button:hover    { background: #f0f0f0; }
+.tabela-chip button:disabled { background: #eee; color: black; }
+
+/* Numeração dos pinos — dentro do chip, ao lado da borda */
+.tabela-chip .num-pino {
+    font-size: 12px;
+    color: #333;
+    padding: 4px 6px;
+}
+
+.tabela-chip .num-pino.esq {
+    border-left: 3px solid black;
+    text-align: right;
+    padding-right: 8px;
+}
+
+.tabela-chip .num-pino.dir {
+    border-right: 3px solid black;
+    text-align: left;
+    padding-left: 8px;
+}
+
+/* Corpo do chip: sem bordas laterais (agora nas colunas num-pino) */
+.tabela-chip .corpo-chip {
+    border-top:    none;
+    border-bottom: none;
+    text-align: center;
+    padding: 4px 20px;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* Fecha o topo: corpo + colunas de número */
+.tabela-chip tr:first-child .corpo-chip,
+.tabela-chip tr:first-child .num-pino {
+    border-top: 3px solid black;
+}
+
+/* Fecha o fundo: corpo + colunas de número */
+.tabela-chip tr:last-child .corpo-chip,
+.tabela-chip tr:last-child .num-pino {
+    border-bottom: 3px solid black;
+}
+
+
+/* ==============================================
+   LISTA DE CHIPS SALVOS
+   ============================================== */
+
+.cartao {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-top: 8px;
+    line-height: 1.8;
+}
